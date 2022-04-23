@@ -7,6 +7,7 @@
 #include <string>
 #include "cuda_runtime.h"
 #include "nccl.h"
+//#include "cuda_profiler_api.h"
 
 #define CUDACHECK(cmd) do {                         \
   cudaError_t e = cmd;                              \
@@ -70,13 +71,13 @@ void init_data( group_info& group, size_t data_size )
         CUDACHECK(cudaMalloc( &(group.recvbuff[ i ]), data_size * sizeof(int)));
         CUDACHECK(cudaMemset(  group.sendbuff[ i ], 1, data_size * sizeof(int)));
         CUDACHECK(cudaMemset(  group.recvbuff[ i ], 0, data_size * sizeof(int)));
-        CUDACHECK(cudaStreamCreate( &(group.streams[ i ]) ));
+        CUDACHECK(cudaStreamCreateWithFlags( &(group.streams[i]), cudaStreamNonBlocking ));
     }
 }
 
 void run_broadcast( group_info& group, size_t data_size )
 {
-    NCCLCHECK(ncclGroupStart());
+    //NCCLCHECK(ncclGroupStart());
     for ( int i = 0; i < group.num_comm; ++i ) 
     {
         NCCLCHECK(ncclBroadcast((const void*)group.sendbuff[ i ], \
@@ -85,12 +86,12 @@ void run_broadcast( group_info& group, size_t data_size )
                                 group.comms[i], \
                                 group.streams[i]));
     }
-    NCCLCHECK(ncclGroupEnd());
+    //NCCLCHECK(ncclGroupEnd());
 }
 
 void run_reduce( group_info& group, size_t data_size )
 {
-    NCCLCHECK(ncclGroupStart());
+    //NCCLCHECK(ncclGroupStart());
     for ( int i = 0; i < group.num_comm; ++i ) 
     {
       // allreduce
@@ -100,7 +101,7 @@ void run_reduce( group_info& group, size_t data_size )
                                group.comms[i], \
                                group.streams[i]) );
     }
-    NCCLCHECK(ncclGroupEnd());
+    //NCCLCHECK(ncclGroupEnd());
 }
 
 void init_comm( group_info& group )
@@ -114,8 +115,7 @@ void sync_stream( group_info& group )
     for ( int i = 0; i < group.num_comm; ++i ) 
     {
       CUDACHECK(cudaSetDevice( group.devs[i]));
-    //   CUDACHECK(cudaStreamSynchronize( group.streams[i]));
-      CUDACHECK(cudaStreamCreateWithFlags( &group.streams[i], cudaStreamNonBlocking ));
+      CUDACHECK(cudaStreamSynchronize( group.streams[i]));
     }
 }
 
@@ -139,58 +139,64 @@ void free_nccl( group_info& group )
 
 int main(int argc, char* argv[])
 {
+    printf("NCCL Version %d.%d.%d\n", NCCL_MAJOR, NCCL_MINOR, NCCL_PATCH );
+
     // Reference
     // https://github.com/NVIDIA/nccl/issues/574
+    // https://github.com/NVIDIA/nccl/issues/217
+    // https://github.com/NVIDIA/nccl/issues/195#issuecomment-473344810
+    // https://github.com/NVIDIA/nccl/issues/239#issuecomment-510565429
+    // https://github.com/NVIDIA/nccl/issues/315
 
     // set enviroment variable before run
     // this is program level setting and thus do not pollute global 
     setenv( "NCCL_PROTO", "Simple", 1);
-    //setenv( "NCCL_DEBUG", "Info", 1);
-    //setenv( "NCCL_DEBUG_SUBSYS", "ALL", 1);
+    setenv( "NCCL_DEBUG", "Info", 1);
+    setenv( "NCCL_DEBUG_SUBSYS", "ALL", 1);
     setenv( "NCCL_ALGO", "Tree", 1 ); // Tree : AllReduceTree+BroadcastRing | Ring : AllReduceRing+BroadcastRing
 
     // managing 4 devices
     int data_size = 64*1024*1024;
 
-    group_info group01_1( "NCCL_GRAPH_FILE_CHAIN_01", std::vector<int>{0,1} );
-    group_info group01_2( "NCCL_GRAPH_FILE_CHAIN_01", std::vector<int>{0,1} );
+    group_info group01( "NCCL_GRAPH_FILE_CHAIN_01", std::vector<int>{0,1} );
+    group_info group02( "NCCL_GRAPH_FILE_CHAIN_02", std::vector<int>{0,2} );
 
     // Set and initial data
-    init_data( group01_1, data_size );
-    init_data( group01_2, data_size );
+    init_data( group01, data_size );
+    init_data( group02, data_size );
+
+    // Start profiling
+    //cudaProfilerStart();
 
     // Initial communicator
     printf("\n\n!!!!!Initial comm\n"); fflush(stdout);
-    init_comm( group01_1 );
-    init_comm( group01_2 );
+    init_comm( group01 );
+    init_comm( group02 );
 
     // Collective run
-    printf("\n\n!!!!!Run broadcast\n"); fflush(stdout);
-    run_broadcast( group01_1, data_size );
-    run_reduce( group01_2, data_size );
-
-
-    // printf("\n\n!!!!!Run allreduce\n"); fflush( stdout );
-    // run_reduce( group01_1, data_size );
-    // run_reduce( group01_2, data_size );
-
+    printf("\n\n!!!!!Run collective\n"); fflush(stdout);
+    NCCLCHECK(ncclGroupStart());
+    run_broadcast( group01, data_size );
+    run_reduce( group02, data_size );
+    NCCLCHECK(ncclGroupEnd());
 
     // synchronize streams
     printf("\n\n!!!!!stream synchronize\n"); fflush(stdout);
-    sync_stream( group01_1 );
-    sync_stream( group01_2 );
+    sync_stream( group01 );
+    sync_stream( group02 );
 
+    // End profiling
+    //cudaProfilerStop();
 
     //free device buffers
     printf("\n\n!!!!!free used buffer\n"); fflush(stdout);
-    free_buffer( group01_1 );
-    free_buffer( group01_2 );
-
+    free_buffer( group01 );
+    free_buffer( group02 );
 
     //finalizing NCCL
     printf("\n\n!!!!!free comm buffer\n"); fflush(stdout);
-    free_nccl( group01_1 );
-    free_nccl( group01_2 );
+    free_nccl( group01 );
+    free_nccl( group02 );
 
 
     printf("\n\n!!!!!Success \n");

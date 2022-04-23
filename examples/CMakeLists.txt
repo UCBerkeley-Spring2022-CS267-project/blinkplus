@@ -19,16 +19,22 @@ endif()
 include_directories( ${NCCL_INCLUDE_DIRS} )
 
 # exec
-add_executable( demo_group0123 demo_group0123.cu  )
-add_executable( demo_group01 demo_group01.cu  )
-add_executable( demo demo.cu  )
+add_executable( mock_blinkplus_2group01 mock_blinkplus_2group01.cu  )
+add_executable( mock_blinkplus_group01_group02 mock_blinkplus_group01_group02.cu  )
+
+#add_executable( demo_group01 demo_group01.cu  )
+#add_executable( demo demo.cu  )
 
 # I'm using C++11 in the test
-target_compile_features( demo_group0123 PRIVATE cxx_std_11)
-target_compile_features( demo_group01 PRIVATE cxx_std_11)
-target_compile_features( demo PRIVATE cxx_std_11)
+target_compile_features( mock_blinkplus_2group01 PRIVATE cxx_std_11)
+target_compile_features( mock_blinkplus_group01_group02 PRIVATE cxx_std_11)
+
+#target_compile_features( demo_group01 PRIVATE cxx_std_11)
+#target_compile_features( demo PRIVATE cxx_std_11)
 
 # link nccl
-target_link_libraries( demo_group0123 PRIVATE ${NCCL_LIBRARIES} )
-target_link_libraries( demo_group01 PRIVATE ${NCCL_LIBRARIES} )
-target_link_libraries( demo PRIVATE ${NCCL_LIBRARIES} )
+target_link_libraries( mock_blinkplus_2group01 PRIVATE ${NCCL_LIBRARIES} )
+target_link_libraries( mock_blinkplus_group01_group02 PRIVATE ${NCCL_LIBRARIES} )
+
+#target_link_libraries( demo_group01 PRIVATE ${NCCL_LIBRARIES} )
+#target_link_libraries( demo PRIVATE ${NCCL_LIBRARIES} )

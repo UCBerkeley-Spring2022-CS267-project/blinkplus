@@ -15,7 +15,7 @@
 # See https://github.com/caffe2/caffe2/issues/1601
 
 #set(NCCL_ROOT_DIR $ENV{NCCL_ROOT_DIR} CACHE PATH "Folder contains NVIDIA NCCL")
-set(NCCL_ROOT_DIR /home/eecs/mengyibai/xiaosx/nccl/build )
+set(NCCL_ROOT_DIR /home/eecs/mengyibai/xiaosx/nccl_v2.12.10/build )
 
 find_path(NCCL_INCLUDE_DIR
   NAMES nccl.h
