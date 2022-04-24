@@ -77,23 +77,31 @@ void init_data( group_info& group, size_t data_size )
 
 void run_broadcast( group_info& group, size_t data_size )
 {
-    //NCCLCHECK(ncclGroupStart());
+    printf("\n@LOG@ run_broadcast start\n"); fflush(stdout);
+    NCCLCHECK(ncclGroupStart());
+    printf("@LOG@ ncclBroadcast start\n"); fflush(stdout);
     for ( int i = 0; i < group.num_comm; ++i ) 
     {
+        printf("@LOG@ ncclBroadcast %d/%d\n", i, group.num_comm); fflush(stdout);
         NCCLCHECK(ncclBroadcast((const void*)group.sendbuff[ i ], \
                                 (void*)group.recvbuff[ i ], \
                                 data_size, ncclInt, 0, \
                                 group.comms[i], \
                                 group.streams[i]));
     }
-    //NCCLCHECK(ncclGroupEnd());
+    printf("@LOG@ ncclBroadcast end\n"); fflush(stdout);
+    NCCLCHECK(ncclGroupEnd());
+    printf("@LOG@ run_broadcast end\n"); fflush(stdout);
 }
 
 void run_reduce( group_info& group, size_t data_size )
 {
-    //NCCLCHECK(ncclGroupStart());
+    printf("\n@LOG@ run_reduce start\n"); fflush(stdout);
+    NCCLCHECK(ncclGroupStart());
+    printf("@LOG@ ncclAllReduce start\n"); fflush(stdout);
     for ( int i = 0; i < group.num_comm; ++i ) 
     {
+        printf("@LOG@ ncclAllReduce %d/%d\n", i, group.num_comm); fflush(stdout);
       // allreduce
       NCCLCHECK(ncclAllReduce( (const void*)group.sendbuff[ i ], \
                                (void*)group.recvbuff[ i ], \
@@ -101,7 +109,9 @@ void run_reduce( group_info& group, size_t data_size )
                                group.comms[i], \
                                group.streams[i]) );
     }
-    //NCCLCHECK(ncclGroupEnd());
+    printf("@LOG@ ncclAllReduce end\n"); fflush(stdout);
+    NCCLCHECK(ncclGroupEnd());
+    printf("@LOG@ run_reduce end\n"); fflush(stdout);
 }
 
 void init_comm( group_info& group )
@@ -153,7 +163,7 @@ int main(int argc, char* argv[])
     setenv( "NCCL_PROTO", "Simple", 1);
     setenv( "NCCL_DEBUG", "Info", 1);
     setenv( "NCCL_DEBUG_SUBSYS", "ALL", 1);
-    setenv( "NCCL_ALGO", "Tree", 1 ); // Tree : AllReduceTree+BroadcastRing | Ring : AllReduceRing+BroadcastRing
+    setenv( "NCCL_ALGO", "Ring", 1 ); // Tree : AllReduceTree+BroadcastRing | Ring : AllReduceRing+BroadcastRing
 
     // managing 4 devices
     int data_size = 64*1024*1024;
@@ -165,40 +175,41 @@ int main(int argc, char* argv[])
     init_data( group01, data_size );
     init_data( group02, data_size );
 
-    // Start profiling
-    //cudaProfilerStart();
-
     // Initial communicator
-    printf("\n\n!!!!!Initial comm\n"); fflush(stdout);
+    printf("@LOG@ Initial comm\n"); fflush(stdout);
     init_comm( group01 );
     init_comm( group02 );
 
     // Collective run
-    printf("\n\n!!!!!Run collective\n"); fflush(stdout);
-    NCCLCHECK(ncclGroupStart());
+    printf("@LOG@ Run collective 1\n"); fflush(stdout);
     run_broadcast( group01, data_size );
+
+    printf("@LOG@ Run collective 2\n"); fflush(stdout);
+    run_reduce( group01, data_size );
+
+    printf("@LOG@ Run collective 3\n"); fflush(stdout);
+    run_broadcast( group02, data_size );
+
+    printf("@LOG@ Run collective 4\n"); fflush(stdout);
     run_reduce( group02, data_size );
-    NCCLCHECK(ncclGroupEnd());
 
     // synchronize streams
-    printf("\n\n!!!!!stream synchronize\n"); fflush(stdout);
+    printf("@LOG@ stream synchronize 1\n"); fflush(stdout);
     sync_stream( group01 );
+
+    printf("@LOG@ stream synchronize 2\n"); fflush(stdout);
     sync_stream( group02 );
 
-    // End profiling
-    //cudaProfilerStop();
-
     //free device buffers
-    printf("\n\n!!!!!free used buffer\n"); fflush(stdout);
+    printf("@LOG@ free used buffer\n"); fflush(stdout);
     free_buffer( group01 );
     free_buffer( group02 );
 
     //finalizing NCCL
-    printf("\n\n!!!!!free comm buffer\n"); fflush(stdout);
+    printf("@LOG@ free comm buffer\n"); fflush(stdout);
     free_nccl( group01 );
     free_nccl( group02 );
 
-
-    printf("\n\n!!!!!Success \n");
+    printf("@LOG@ Success \n");
     return 0;
 }
