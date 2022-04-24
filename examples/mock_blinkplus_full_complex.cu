@@ -167,8 +167,10 @@ void sync_stream( group_info& group )
 {
     for ( int i = 0; i < group.num_comm; ++i ) 
     {
-      CUDACHECK(cudaSetDevice( group.devs[i] ));
-      CUDACHECK(cudaStreamSynchronize( group.streams[i] ));
+        printf("@LOG@ sync stream %d start\n", group.devs[i] );
+        CUDACHECK(cudaSetDevice( group.devs[i] ));
+        CUDACHECK(cudaStreamSynchronize( group.streams[i] ));
+        printf("@LOG@ sync stream %d end\n", group.devs[i] );
     }
 }
 
@@ -264,8 +266,10 @@ int main(int argc, char* argv[])
     // synchronize streams
     printf("\n\n!!!!!stream synchronize user\n"); fflush(stdout);
     sync_stream( group01 );
+
     printf("\n\n!!!!!stream synchronize helper 1\n"); fflush(stdout);
     sync_stream( helper_group021 );
+
     printf("\n\n!!!!!stream synchronize helper 2\n"); fflush(stdout);
     // sync_stream( helper_group031 );
     printf("\n\n!!!!!stream synchronize helper 3\n"); fflush(stdout);
