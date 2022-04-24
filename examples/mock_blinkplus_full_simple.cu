@@ -7,7 +7,6 @@
 #include <string>
 #include "cuda_runtime.h"
 #include "nccl.h"
-//#include "cuda_profiler_api.h"
 
 #define CUDACHECK(cmd) do {                         \
   cudaError_t e = cmd;                              \
@@ -71,52 +70,37 @@ void init_data( group_info& group, size_t data_size )
         CUDACHECK(cudaMalloc( &(group.recvbuff[ i ]), data_size * sizeof(int)));
         CUDACHECK(cudaMemset(  group.sendbuff[ i ], 1, data_size * sizeof(int)));
         CUDACHECK(cudaMemset(  group.recvbuff[ i ], 0, data_size * sizeof(int)));
-        CUDACHECK(cudaStreamCreateWithFlags( &(group.streams[i]), cudaStreamNonBlocking ));
+        CUDACHECK(cudaStreamCreate( &(group.streams[ i ]) ));
     }
 }
 
-
 void run_broadcast( group_info& group, size_t data_size )
 {
-    printf("\n@LOG@ run_broadcast start\n"); fflush(stdout);
     NCCLCHECK(ncclGroupStart());
-    printf("@LOG@ ncclBroadcast start\n"); fflush(stdout);
-
     for ( int i = 0; i < group.num_comm; ++i ) 
     {
-        printf("@LOG@ ncclBroadcast %d/%d\n", i, group.num_comm); fflush(stdout);
         NCCLCHECK(ncclBroadcast((const void*)group.sendbuff[ i ], \
                                 (void*)group.recvbuff[ i ], \
                                 data_size, ncclInt, 0, \
                                 group.comms[i], \
                                 group.streams[i]));
     }
-
-    printf("@LOG@ ncclBroadcast end\n"); fflush(stdout);
     NCCLCHECK(ncclGroupEnd());
-    printf("@LOG@ run_broadcast end\n"); fflush(stdout);
 }
 
 void run_reduce( group_info& group, size_t data_size )
 {
-    printf("\n@LOG@ run_reduce start\n"); fflush(stdout);
     NCCLCHECK(ncclGroupStart());
-    printf("@LOG@ ncclAllReduce start\n"); fflush(stdout);
-
     for ( int i = 0; i < group.num_comm; ++i ) 
     {
-        printf("@LOG@ ncclAllReduce %d/%d\n", i, group.num_comm); fflush(stdout);
-        // allreduce
-        NCCLCHECK(ncclAllReduce( (const void*)group.sendbuff[ i ], \
-                                (void*)group.recvbuff[ i ], \
-                                data_size, ncclInt, ncclSum, \
-                                group.comms[i], \
-                                group.streams[i]) );
+      // allreduce
+      NCCLCHECK(ncclAllReduce( (const void*)group.sendbuff[ i ], \
+                               (void*)group.recvbuff[ i ], \
+                               data_size, ncclInt, ncclSum, \
+                               group.comms[i], \
+                               group.streams[i]) );
     }
-
-    printf("@LOG@ ncclAllReduce end\n"); fflush(stdout);
     NCCLCHECK(ncclGroupEnd());
-    printf("@LOG@ run_reduce end\n"); fflush(stdout);
 }
 
 void init_comm( group_info& group )
@@ -154,67 +138,71 @@ void free_nccl( group_info& group )
 
 int main(int argc, char* argv[])
 {
-    printf("NCCL Version %d.%d.%d\n", NCCL_MAJOR, NCCL_MINOR, NCCL_PATCH );
-
     // Reference
     // https://github.com/NVIDIA/nccl/issues/574
-    // https://github.com/NVIDIA/nccl/issues/217
-    // https://github.com/NVIDIA/nccl/issues/195#issuecomment-473344810
-    // https://github.com/NVIDIA/nccl/issues/239#issuecomment-510565429
-    // https://github.com/NVIDIA/nccl/issues/315
 
     // set enviroment variable before run
     // this is program level setting and thus do not pollute global 
     setenv( "NCCL_PROTO", "Simple", 1);
-    setenv( "NCCL_DEBUG", "Info", 1);
-    setenv( "NCCL_DEBUG_SUBSYS", "ALL", 1);
-    setenv( "NCCL_ALGO", "Ring", 1 ); // Tree : AllReduceTree+BroadcastRing | Ring : AllReduceRing+BroadcastRing
+    //setenv( "NCCL_DEBUG", "Info", 1);
+    //setenv( "NCCL_DEBUG_SUBSYS", "ALL", 1);
+    setenv( "NCCL_ALGO", "Tree", 1 ); // Tree : AllReduceTree+BroadcastRing | Ring : AllReduceRing+BroadcastRing
 
     // managing 4 devices
     int data_size = 256*1024*1024;
 
     group_info group01( "NCCL_GRAPH_FILE_CHAIN_01", std::vector<int>{0,1} );
-    group_info group02( "NCCL_GRAPH_FILE_CHAIN_02", std::vector<int>{2,0} );
+    group_info group021( "NCCL_GRAPH_FILE_CHAIN_021", std::vector<int>{0,2,1} );
+    group_info group031( "NCCL_GRAPH_FILE_CHAIN_031", std::vector<int>{0,3,1} );
+    group_info group0321( "NCCL_GRAPH_FILE_CHAIN_0321", std::vector<int>{0,3,2,1} );
 
     // Set and initial data
     init_data( group01, data_size );
-    init_data( group02, data_size );
+    init_data( group021, data_size );
+    init_data( group031, data_size );
+    init_data( group0321, data_size );
 
     // Initial communicator
-    printf("@LOG@ Initial comm\n"); fflush(stdout);
+    printf("\n\n!!!!!Initial comm\n"); fflush(stdout);
     init_comm( group01 );
-    init_comm( group02 );
+    init_comm( group021 );
+    init_comm( group031 );
+    init_comm( group0321 );
 
     // Collective run
-    printf("@LOG@ Run collective 1\n"); fflush(stdout);
-    run_broadcast( group01, data_size);
+    printf("\n\n!!!!!Run broadcast\n"); fflush(stdout);
+    run_broadcast( group01, data_size );
+    run_broadcast( group021, data_size );
+    run_broadcast( group031, data_size );
+    run_broadcast( group0321, data_size );
 
-    printf("@LOG@ Run collective 2\n"); fflush(stdout);
-    run_reduce( group01, data_size);
-
-    printf("@LOG@ Run collective 4\n"); fflush(stdout);
-    run_broadcast( group02, data_size);
-
-    printf("@LOG@ Run collective 3\n"); fflush(stdout);
-    run_reduce( group02, data_size);
+    printf("\n\n!!!!!Run allreduce\n"); fflush( stdout );
+    run_reduce( group01, data_size );
+    run_reduce( group021, data_size );
+    run_reduce( group031, data_size );
+    run_reduce( group0321, data_size );
 
     // synchronize streams
-    printf("@LOG@ stream synchronize 1\n"); fflush(stdout);
+    printf("\n\n!!!!!stream synchronize\n"); fflush(stdout);
     sync_stream( group01 );
-
-    printf("@LOG@ stream synchronize 2\n"); fflush(stdout);
-    sync_stream( group02 );
+    sync_stream( group021 );
+    sync_stream( group031 );
+    sync_stream( group0321 );
 
     //free device buffers
-    printf("@LOG@ free used buffer\n"); fflush(stdout);
+    printf("\n\n!!!!!free used buffer\n"); fflush(stdout);
     free_buffer( group01 );
-    free_buffer( group02 );
+    free_buffer( group021 );
+    free_buffer( group031 );
+    free_buffer( group0321 );
 
     //finalizing NCCL
-    printf("@LOG@ free comm buffer\n"); fflush(stdout);
+    printf("\n\n!!!!!free comm buffer\n"); fflush(stdout);
     free_nccl( group01 );
-    free_nccl( group02 );
+    free_nccl( group021 );
+    free_nccl( group031 );
+    free_nccl( group0321 );
 
-    printf("@LOG@ Success \n");
+    printf("\n\n!!!!!Success \n");
     return 0;
 }
