@@ -149,7 +149,7 @@ int main(int argc, char* argv[])
     setenv( "NCCL_ALGO", "Tree", 1 ); // Tree : AllReduceTree+BroadcastRing | Ring : AllReduceRing+BroadcastRing
 
     // managing 4 devices
-    int data_size = 256*1024*1024;
+    int data_size = 128*1024*1024;
 
     group_info group01( "NCCL_GRAPH_FILE_CHAIN_01", std::vector<int>{0,1} );
     group_info group021( "NCCL_GRAPH_FILE_CHAIN_021", std::vector<int>{0,2,1} );

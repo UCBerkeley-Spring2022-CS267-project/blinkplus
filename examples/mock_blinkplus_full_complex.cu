@@ -76,6 +76,7 @@ void init_data( group_info& group, size_t data_size )
 
 void init_data_helper( const group_info& group, group_info& helper_group, int helper_group_idx, int num_helper_group, size_t data_size )
 {
+    printf("\n");
     if ( helper_group_idx < 1 )
     {
         throw std::runtime_error("helper_group idx should start at 1\n");
@@ -83,6 +84,7 @@ void init_data_helper( const group_info& group, group_info& helper_group, int he
 
     for ( int i = 0; i < helper_group.num_comm; ++i )
     {
+        printf("@LOG@ set helper group device %d\n", helper_group.devs[ i ] );
         CUDACHECK(cudaSetDevice( helper_group.devs[ i ] ));
     
         bool use_user_buffer = false;
@@ -91,8 +93,23 @@ void init_data_helper( const group_info& group, group_info& helper_group, int he
             // Use user group buffer 
             if ( group.devs[ j ] == helper_group.devs[ i ] )
             {
+                printf("@LOG@ helper group device %d use user buffer\n", helper_group.devs[ i ] );
                 use_user_buffer = true;
-                helper_group.sendbuff[ i ] = group.sendbuff[ i ] + helper_group_idx * data_size / (num_helper_group+1);
+
+                int offset = helper_group_idx * data_size / (num_helper_group+1);
+                helper_group.sendbuff[ i ] = group.sendbuff[ i ] + offset;
+                helper_group.recvbuff[ i ] = group.recvbuff[ i ] + offset;
+
+                //CUDACHECK(cudaMalloc( &(helper_group.sendbuff[ i ]), data_size / (num_helper_group+1) * sizeof(int)));
+                //CUDACHECK(cudaMalloc( &(helper_group.recvbuff[ i ]), data_size / (num_helper_group+1) * sizeof(int)));
+
+                //CUDACHECK(cudaMalloc( &(helper_group.recvbuff[ i ]), data_size / (num_helper_group+1) * sizeof(int)));
+                //CUDACHECK(cudaMemset(  helper_group.recvbuff[ i ], 0, data_size / (num_helper_group+1) * sizeof(int)));
+
+                printf("@LOG@ user address %lld/%p, our address %lld/%p, address diff %lld, offset %d, data size %d, helper idx %d\n", \
+                    group.sendbuff[ i ], group.sendbuff[ i ], helper_group.sendbuff[ i ], helper_group.sendbuff[ i ], \
+                    helper_group.sendbuff[ i ] - group.sendbuff[ i ], \
+                    offset, data_size, helper_group_idx );
                 break;
             }
         }
@@ -100,6 +117,7 @@ void init_data_helper( const group_info& group, group_info& helper_group, int he
         // allocate own buffer
         if ( !use_user_buffer )
         {
+            printf("@LOG@ helper group device %d use internal buffer\n", helper_group.devs[ i ] );
             CUDACHECK(cudaMalloc( &(helper_group.sendbuff[ i ]), data_size / (num_helper_group+1) * sizeof(int)));
             CUDACHECK(cudaMalloc( &(helper_group.recvbuff[ i ]), data_size / (num_helper_group+1) * sizeof(int)));
             CUDACHECK(cudaMemset(  helper_group.sendbuff[ i ], 1, data_size / (num_helper_group+1) * sizeof(int)));
@@ -149,8 +167,8 @@ void sync_stream( group_info& group )
 {
     for ( int i = 0; i < group.num_comm; ++i ) 
     {
-      CUDACHECK(cudaSetDevice( group.devs[i]));
-      CUDACHECK(cudaStreamSynchronize( group.streams[i]));
+      CUDACHECK(cudaSetDevice( group.devs[i] ));
+      CUDACHECK(cudaStreamSynchronize( group.streams[i] ));
     }
 }
 
@@ -163,6 +181,30 @@ void free_buffer( group_info& group )
         CUDACHECK(cudaFree( group.recvbuff[i] ));
     }
 }
+
+void free_buffer_helper( const group_info& group, group_info& helper_group )
+{
+    for ( int i = 0; i < helper_group.num_comm; ++i ) 
+    {
+        bool is_user_buffer = false;
+        for ( int j = 0; j < group.num_comm; ++j )
+        {
+            if ( group.devs[ j ] == helper_group.devs[ i ] )
+            {
+                is_user_buffer = true;
+                break;
+            }
+        }
+        
+        if ( !is_user_buffer )
+        {
+            CUDACHECK(cudaSetDevice( helper_group.devs[i] ));
+            CUDACHECK(cudaFree( helper_group.sendbuff[i] ));
+            CUDACHECK(cudaFree( helper_group.recvbuff[i] ));
+        }
+    }
+}
+
 
 void free_nccl( group_info& group )
 {
@@ -186,58 +228,62 @@ int main(int argc, char* argv[])
 
     // managing 4 devices
     int data_size = 256*1024*1024;
+    int num_helper_group = 1;
 
     group_info group01( "NCCL_GRAPH_FILE_CHAIN_01", std::vector<int>{0,1} );
     group_info helper_group021( "NCCL_GRAPH_FILE_CHAIN_021", std::vector<int>{0,2,1} );
-    group_info helper_group031( "NCCL_GRAPH_FILE_CHAIN_031", std::vector<int>{0,3,1} );
-    group_info helper_group0321( "NCCL_GRAPH_FILE_CHAIN_0321", std::vector<int>{0,3,2,1} );
+    // group_info helper_group031( "NCCL_GRAPH_FILE_CHAIN_031", std::vector<int>{0,3,1} );
+    // group_info helper_group0321( "NCCL_GRAPH_FILE_CHAIN_0321", std::vector<int>{0,3,2,1} );
 
     // Set and initial data
     init_data( group01, data_size );
-    init_data_helper( group01, helper_group021, 1, 3, data_size );
-    init_data_helper( group01, helper_group031, 2, 3, data_size );
-    init_data_helper( group01, helper_group0321, 3, 3, data_size );
+    init_data_helper( group01, helper_group021, 1, num_helper_group, data_size );
+    // init_data_helper( group01, helper_group031, 2, num_helper_group, data_size );
+    // init_data_helper( group01, helper_group0321, 3, num_helper_group, data_size );
 
     // Initial communicator
     printf("\n\n!!!!!Initial comm\n"); fflush(stdout);
     init_comm( group01 );
     init_comm( helper_group021 );
-    init_comm( helper_group031 );
-    init_comm( helper_group0321 );
+    // init_comm( helper_group031 );
+    // init_comm( helper_group0321 );
 
     // Collective run
     printf("\n\n!!!!!Run broadcast\n"); fflush(stdout);
-    run_broadcast( group01, data_size );
-    run_broadcast( helper_group021, data_size );
-    run_broadcast( helper_group031, data_size );
-    run_broadcast( helper_group0321, data_size );
+    run_broadcast( group01, data_size / ( num_helper_group + 1 ) );
+    run_broadcast( helper_group021, data_size / ( num_helper_group + 1 ));
+    // run_broadcast( helper_group031, data_size / ( num_helper_group + 1 ) );
+    // run_broadcast( helper_group0321, data_size / ( num_helper_group + 1 ) );
 
-    printf("\n\n!!!!!Run allreduce\n"); fflush( stdout );
-    run_reduce( group01, data_size );
-    run_reduce( helper_group021, data_size );
-    run_reduce( helper_group031, data_size );
-    run_reduce( helper_group0321, data_size );
+    // printf("\n\n!!!!!Run allreduce\n"); fflush( stdout );
+    // run_reduce( group01, data_size / ( num_helper_group + 1 ) );
+    // run_reduce( helper_group021, data_size / ( num_helper_group + 1 ) );
+    // run_reduce( helper_group031, data_size / ( num_helper_group + 1 ) );
+    // run_reduce( helper_group0321, data_size / ( num_helper_group + 1 ) );
 
     // synchronize streams
-    printf("\n\n!!!!!stream synchronize\n"); fflush(stdout);
+    printf("\n\n!!!!!stream synchronize user\n"); fflush(stdout);
     sync_stream( group01 );
+    printf("\n\n!!!!!stream synchronize helper 1\n"); fflush(stdout);
     sync_stream( helper_group021 );
-    sync_stream( helper_group031 );
-    sync_stream( helper_group0321 );
+    printf("\n\n!!!!!stream synchronize helper 2\n"); fflush(stdout);
+    // sync_stream( helper_group031 );
+    printf("\n\n!!!!!stream synchronize helper 3\n"); fflush(stdout);
+    // sync_stream( helper_group0321 );
 
     //free device buffers
     printf("\n\n!!!!!free used buffer\n"); fflush(stdout);
     free_buffer( group01 );
-    free_buffer( helper_group021 );
-    free_buffer( helper_group031 );
-    free_buffer( helper_group0321 );
+    free_buffer_helper( group01, helper_group021 );
+    // free_buffer_helper( group01, helper_group031 );
+    // free_buffer_helper( group01, helper_group0321 );
 
     //finalizing NCCL
     printf("\n\n!!!!!free comm buffer\n"); fflush(stdout);
     free_nccl( group01 );
     free_nccl( helper_group021 );
-    free_nccl( helper_group031 );
-    free_nccl( helper_group0321 );
+    // free_nccl( helper_group031 );
+    // free_nccl( helper_group0321 );
 
     printf("\n\n!!!!!Success \n");
     return 0;
