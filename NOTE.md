@@ -52,21 +52,3 @@ NCCL_GRAPH_DUMP_FILE=`pwd`/graph.xml
 # visual result
 /usr/local/cuda-11.5/bin/nvvp output.nvvp
 ```
-
-## Export graph path
-```shell
-export NCCL_GRAPH_FILE_CHAIN_01=`pwd`/graphs/chain01.xml
-export NCCL_GRAPH_FILE_CHAIN_02=`pwd`/graphs/chain02.xml
-export NCCL_GRAPH_FILE_CHAIN_03=`pwd`/graphs/chain03.xml
-export NCCL_GRAPH_FILE_CHAIN_23=`pwd`/graphs/chain23.xml
-export NCCL_GRAPH_FILE_CHAIN_021=`pwd`/graphs/chain021.xml
-export NCCL_GRAPH_FILE_CHAIN_031=`pwd`/graphs/chain031.xml
-export NCCL_GRAPH_FILE_CHAIN_0321=`pwd`/graphs/chain0321.xml
-export NCCL_GRAPH_FILE_CHAIN_0123=`pwd`/graphs/chain0123.xml
-
-echo $NCCL_GRAPH_FILE_CHAIN_01
-echo $NCCL_GRAPH_FILE_CHAIN_021
-echo $NCCL_GRAPH_FILE_CHAIN_031
-echo $NCCL_GRAPH_FILE_CHAIN_0321
-echo $NCCL_GRAPH_FILE_CHAIN_0123
-```

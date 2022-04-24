@@ -32,7 +32,7 @@ struct blinkplusHelperGroup
     std::vector<int*> recvbuff;
     std::vector<cudaStream_t> streams;
     std::string graph_filepath;
-    size_t num_comms;
+    int num_comms;
 
     blinkplusHelperGroup( const char* graph_filepath_cstr, std::vector<int> devs )
     {
@@ -56,7 +56,14 @@ std::vector<blinkplusHelperGroup> blinkplusHelperGroupsContainer;
 
 #define BLINKPLUS_BUFFER_SIZE_BYTES 100000000 // 1GB
 
-NCCL_API(ncclResult_t, blinkplusCommInitAll, ncclComm_t* comms, int ndev, const int* devlist, int numBlinkplusHelperGroup );
+// NCCL_API(ncclResult_t, blinkplusGetHelperCnt, ncclComm_t* comms, int ndev, const int *devlist, int* helper_cnt );
+ncclResult_t blinkplusGetHelperCnt( ncclComm_t* comm, int ndev, const int *devlist, int* helper_cnt )
+{
+  *helper_cnt = 3;
+}
+
+
+// NCCL_API(ncclResult_t, blinkplusCommInitAll, ncclComm_t* comms, int ndev, const int* devlist, int numBlinkplusHelperGroup );
 ncclResult_t blinkplusCommInitAll( ncclComm_t* comms, int ndev, const int *devlist, int numBlinkplusHelperGroup )
 {
   // Currently, lots of support is hardcoded
@@ -146,7 +153,7 @@ ncclResult_t blinkplusCommInitAll( ncclComm_t* comms, int ndev, const int *devli
 } // end of blinkplusCommInitAll
 
 
-NCCL_API(ncclResult_t, blinkplusCommDestroy, ncclComm_t* comms );
+// NCCL_API(ncclResult_t, blinkplusCommDestroy, ncclComm_t* comms );
 ncclResult_t  blinkplusCommDestroy( ncclComm_t* comms )
 {
   for ( int group_i = 0; group_i < blinkplusHelperGroupsContainer.size(); ++group_i )
@@ -164,10 +171,10 @@ ncclResult_t  blinkplusCommDestroy( ncclComm_t* comms )
 } // end of blinkplusCommDestroy
 
 
-NCCL_API(ncclResult_t, blinkplusBroadcast, ncclComm_t* comms, int ndev, const int* devlist, \
-  const void*** sendbuff, void*** recvbuff, size_t* count, ncclDataType_t datatype, int root );
+//NCCL_API(ncclResult_t, blinkplusBroadcast, ncclComm_t* comms, int ndev, const int* devlist, \
+  const void*** sendbuff, void*** recvbuff, int* count, ncclDataType_t datatype, int root );
 ncclResult_t  blinkplusBroadcast( ncclComm_t* comms, int ndev, const int *devlist, \
-    const void*** sendbuff, void*** recvbuff, size_t* count, ncclDataType_t datatype, int root )
+    const void*** sendbuff, void*** recvbuff, int* count, ncclDataType_t datatype, int root )
 {
   // Start broadcast for each group
   for ( int group_i = 0; group_i < blinkplusHelperGroupsContainer.size(); ++group_i )
@@ -210,10 +217,10 @@ ncclResult_t  blinkplusBroadcast( ncclComm_t* comms, int ndev, const int *devlis
 }
 
 
-NCCL_API(ncclResult_t, blinkplusAllReduce, ncclComm_t* comms, int ndev, const int* devlist, \
-  const void*** sendbuff, void*** recvbuff, size_t* count, ncclDataType_t datatype, ncclRedOp_t op );
+// NCCL_API(ncclResult_t, blinkplusAllReduce, ncclComm_t* comms, int ndev, const int* devlist, \
+  const void*** sendbuff, void*** recvbuff, int* count, ncclDataType_t datatype, ncclRedOp_t op );
 ncclResult_t  blinkplusAllReduce( ncclComm_t* comms, int ndev, const int *devlist, \
-    const void*** sendbuff, void*** recvbuff, size_t* count, ncclDataType_t datatype, ncclRedOp_t op )
+    const void*** sendbuff, void*** recvbuff, int* count, ncclDataType_t datatype, ncclRedOp_t op )
 {
   // Start all reduce for each group
   for ( int group_i = 0; group_i < blinkplusHelperGroupsContainer.size(); ++group_i )
@@ -256,7 +263,8 @@ ncclResult_t  blinkplusAllReduce( ncclComm_t* comms, int ndev, const int *devlis
   } // end for each helper group
 }
 
-NCCL_API(ncclResult_t, blinkplusStreamSynchronize, ncclComm_t* comms );
+
+// NCCL_API(ncclResult_t, blinkplusStreamSynchronize, ncclComm_t* comms );
 ncclResult_t blinkplusStreamSynchronize( ncclComm_t* comms )
 {
   for ( int group_i = 0; group_i < blinkplusHelperGroupsContainer.size(); ++group_i )
