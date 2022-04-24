@@ -182,24 +182,26 @@ int main(int argc, char* argv[])
     setenv( "NCCL_ALGO", "Ring", 1 ); // Tree : AllReduceTree+BroadcastRing | Ring : AllReduceRing+BroadcastRing
 
     // managing 4 devices
-    int data_size = 64*1024*1024;
+    int data_size = 16*1024*1024;
 
     group_info group01( "NCCL_GRAPH_FILE_CHAIN_01", std::vector<int>{0,1} );
     group_info group02( "NCCL_GRAPH_FILE_CHAIN_02", std::vector<int>{0,2} );
+    group_info group03( "NCCL_GRAPH_FILE_CHAIN_03", std::vector<int>{0,3} );
 
     // Set and initial data
     init_data( group01, data_size );
     init_data( group02, data_size );
+    init_data( group03, data_size );
 
     // Initial communicator
     printf("@LOG@ Initial comm\n"); fflush(stdout);
     init_comm( group01 );
     init_comm( group02 );
+    init_comm( group03 );
 
     // Collective run
-    run_dummy( group01 );
-
     printf("@LOG@ Run collective 1\n"); fflush(stdout);
+    run_broadcast( group01, data_size/10 );
     run_broadcast( group01, data_size );
 
     printf("@LOG@ Run collective 2\n"); fflush(stdout);
@@ -211,6 +213,12 @@ int main(int argc, char* argv[])
     printf("@LOG@ Run collective 4\n"); fflush(stdout);
     run_reduce( group02, data_size );
 
+    printf("@LOG@ Run collective 5\n"); fflush(stdout);
+    run_broadcast( group03, data_size );
+
+    printf("@LOG@ Run collective 6\n"); fflush(stdout);
+    run_reduce( group03, data_size );
+
     // synchronize streams
     printf("@LOG@ stream synchronize 1\n"); fflush(stdout);
     sync_stream( group01 );
@@ -218,15 +226,20 @@ int main(int argc, char* argv[])
     printf("@LOG@ stream synchronize 2\n"); fflush(stdout);
     sync_stream( group02 );
 
+    printf("@LOG@ stream synchronize 2\n"); fflush(stdout);
+    sync_stream( group03 );
+
     //free device buffers
     printf("@LOG@ free used buffer\n"); fflush(stdout);
     free_buffer( group01 );
     free_buffer( group02 );
+    free_buffer( group03 );
 
     //finalizing NCCL
     printf("@LOG@ free comm buffer\n"); fflush(stdout);
     free_nccl( group01 );
     free_nccl( group02 );
+    free_nccl( group03 );
 
     printf("@LOG@ Success \n");
     return 0;
