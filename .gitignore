@@ -8,3 +8,6 @@
 # cmake
 build/
 examples/build/
+
+# profile
+*.nvvp
