@@ -24,6 +24,7 @@
     }                                                 \
   } while(0)
 
+
 struct blinkplusHelperGroup
 {
     std::vector<int> devs;
@@ -38,7 +39,7 @@ struct blinkplusHelperGroup
     {
         if ( std::getenv(graph_filepath_cstr) == nullptr )
         {
-            throw std::runtime_error("NCCL_GRAPH_FILE_CHAIN_XXX unset\b");
+            throw std::runtime_error("BLINKPLUS_GRAPH_FILE_CHAIN_XXX unset\n");
         }
         this->graph_filepath = std::getenv(graph_filepath_cstr);
 
@@ -56,10 +57,12 @@ std::vector<blinkplusHelperGroup> blinkplusHelperGroupsContainer;
 
 #define BLINKPLUS_BUFFER_SIZE_BYTES 100000000 // 1GB
 
+
 // NCCL_API(ncclResult_t, blinkplusGetHelperCnt, ncclComm_t* comms, int ndev, const int *devlist, int* helper_cnt );
 ncclResult_t blinkplusGetHelperCnt( ncclComm_t* comm, int ndev, const int *devlist, int* helper_cnt )
 {
   *helper_cnt = 3;
+  return ncclSuccess;
 }
 
 
@@ -82,13 +85,13 @@ ncclResult_t blinkplusCommInitAll( ncclComm_t* comms, int ndev, const int *devli
   // Create blink+ helper group
   // return its corresbonding error code
   blinkplusHelperGroupsContainer.clear();
-  blinkplusHelperGroupsContainer.reserve( 3 );
+  blinkplusHelperGroupsContainer.reserve( numBlinkplusHelperGroup );
   setenv( "NCCL_PROTO", "Simple", 1);
   setenv( "NCCL_ALGO", "Tree", 1 );
 
-  blinkplusHelperGroupsContainer.emplace_back( "NCCL_GRAPH_FILE_CHAIN_021", std::vector<int>{0,2,1} );
-  blinkplusHelperGroupsContainer.emplace_back( "NCCL_GRAPH_FILE_CHAIN_031", std::vector<int>{0,3,1} );
-  blinkplusHelperGroupsContainer.emplace_back( "NCCL_GRAPH_FILE_CHAIN_0321", std::vector<int>{0,3,2,1} );
+  blinkplusHelperGroupsContainer.emplace_back( "BLINKPLUS_GRAPH_FILE_CHAIN_021", std::vector<int>{0,2,1} );
+  blinkplusHelperGroupsContainer.emplace_back( "BLINKPLUS_GRAPH_FILE_CHAIN_031", std::vector<int>{0,3,1} );
+  blinkplusHelperGroupsContainer.emplace_back( "BLINKPLUS_GRAPH_FILE_CHAIN_0321", std::vector<int>{0,3,2,1} );
 
   // Save user graph file for later use
   std::string userGraphFile;
@@ -150,24 +153,46 @@ ncclResult_t blinkplusCommInitAll( ncclComm_t* comms, int ndev, const int *devli
   {
     setenv( "NCCL_GRAPH_FILE", userGraphFile.c_str(), 1 );
   }
+
+  return ncclSuccess;
 } // end of blinkplusCommInitAll
 
 
 // NCCL_API(ncclResult_t, blinkplusCommDestroy, ncclComm_t* comms );
-ncclResult_t  blinkplusCommDestroy( ncclComm_t* comms )
+ncclResult_t  blinkplusCommDestroy( ncclComm_t* comms, int ndev, const int *devlist )
 {
   for ( int group_i = 0; group_i < blinkplusHelperGroupsContainer.size(); ++group_i )
   {
     #define helperGroupI( i ) blinkplusHelperGroupsContainer.at( i )
   
-    // Allocate memory buffer & stream
     for ( int comm_j = 0; comm_j < helperGroupI( group_i ).num_comms; comm_j++ )
     {
+      bool is_user_buffer = false;
+      for ( int user_dev_k = 0; user_dev_k < ndev; ++user_dev_k )
+      {
+        if ( devlist[ user_dev_k ] == helperGroupI( group_i ).devs[ comm_j ] )
+        {
+          is_user_buffer = true;
+          break;
+        }
+      }
+
+      // destroy blink+ internal buffer
+      if ( !is_user_buffer )
+      {
+        CUDACHECK(cudaSetDevice( helperGroupI( group_i ).devs.at( comm_j ) ));
+        CUDACHECK(cudaFree( helperGroupI( group_i ).sendbuff.at( comm_j ) ));
+        CUDACHECK(cudaFree( helperGroupI( group_i ).recvbuff.at( comm_j ) ));
+      }
+
+      // destroy nccl comm used by blink+
       ncclCommDestroy( helperGroupI( group_i ).comms.at( comm_j ) );
     } // end for each comm/dev inside group
 
     #undef helperGroupI
   } // end for each helper group
+
+  return ncclSuccess;
 } // end of blinkplusCommDestroy
 
 
@@ -214,6 +239,8 @@ ncclResult_t  blinkplusBroadcast( ncclComm_t* comms, int ndev, const int *devlis
 
     NCCLCHECK(ncclGroupEnd());
   } // end for each helper group
+
+  return ncclSuccess;
 }
 
 
@@ -261,6 +288,8 @@ ncclResult_t  blinkplusAllReduce( ncclComm_t* comms, int ndev, const int *devlis
 
     NCCLCHECK(ncclGroupEnd());
   } // end for each helper group
+
+  return ncclSuccess;
 }
 
 
@@ -280,6 +309,8 @@ ncclResult_t blinkplusStreamSynchronize( ncclComm_t* comms )
 
     #undef helperGroupI
   } // end for each helper group
+
+  return ncclSuccess;
 }
 
 #undef CUDACHECK

@@ -29,7 +29,7 @@
 } while(0)
 
 
-int main(int argc, char* argv[])
+int main(int argc, char* argv[]) // char** argv
 {
     printf("NCCL Version %d.%d.%d\n", NCCL_MAJOR, NCCL_MINOR, NCCL_PATCH );
 
@@ -40,7 +40,7 @@ int main(int argc, char* argv[])
     // setenv( "NCCL_ALGO", "Ring", 1 );
 
     // User allocate resources
-    int total_data_size = 256*1024*1024;
+    int total_data_size = 512*1024*1024;
     int num_comm = 2;
     std::vector<int> devs = {0,1};
     std::vector<ncclComm_t> comms( num_comm );
@@ -53,7 +53,7 @@ int main(int argc, char* argv[])
     int num_helper;
     NCCLCHECK(blinkplusGetHelperCnt( comms.data(), num_comm, devs.data(), &num_helper ));
 
-    printf("blink+ init comm and data\n");
+    printf("blink+ init comm and data on %d helper\n", num_helper );
     NCCLCHECK(blinkplusCommInitAll( comms.data(), num_comm, devs.data(), num_helper ));
 
     printf("User user stream data\n");
@@ -63,19 +63,19 @@ int main(int argc, char* argv[])
         CUDACHECK(cudaStreamCreateWithFlags( &(streams[i]), cudaStreamNonBlocking ));
     }
 
-    printf("Initial data\n");
+    printf("Initial data of size %d\n", total_data_size);
     // currently ignore none dividable data case
-    int chunk_data_size = total_data_size / num_helper;
+    int chunk_data_size = total_data_size / (num_helper + 1);
 
     std::vector<int**> sendbuffs( num_helper + 1 );
     std::vector<int**> recvbuffs( num_helper + 1 );
     std::vector<int> chunk_data_sizes( chunk_data_size, (num_helper+1) );
-    
+
     for ( int group_i = 0; group_i < sendbuffs.size(); ++group_i )
     {
       sendbuffs[ group_i ] = (int**)malloc( num_comm * sizeof(int*) );
       recvbuffs[ group_i ] = (int**)malloc( num_comm * sizeof(int*) );
-      
+
       for ( int comm_i = 0; comm_i < num_comm; ++comm_i )
       {
         CUDACHECK(cudaMalloc( (sendbuffs[ group_i ] + comm_i), chunk_data_size * sizeof(int)));
@@ -121,7 +121,7 @@ int main(int argc, char* argv[])
     NCCLCHECK( blinkplusAllReduce( comms.data(), num_comm, devs.data(), \
       (const void***)(sendbuffs.data() + 1), (void***)(recvbuffs.data() + 1), \
       chunk_data_sizes.data(), ncclInt, ncclSum ) );
-    
+
     printf("User sync stream\n");
     for ( int i = 0; i < num_comm; ++i ) 
     {
@@ -150,7 +150,7 @@ int main(int argc, char* argv[])
     }
 
     printf("blink+ free buffer and comm\n");
-    NCCLCHECK( blinkplusCommDestroy( comms.data() ) );
+    NCCLCHECK( blinkplusCommDestroy( comms.data(), num_comm, devs.data() ) );
 
     printf("Success \n");
     return 0;

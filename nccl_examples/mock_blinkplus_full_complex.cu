@@ -82,13 +82,13 @@ void init_data_helper( const group_info& group, group_info& helper_group, int he
         throw std::runtime_error("helper_group idx should start at 1\n");
     }
 
-    for ( int i = 0; i < helper_group.num_comm; ++i )
+    for ( int i = 0; i < helper_group.num_comm; ++i ) // 0,1,2
     {
         printf("@LOG@ set helper group device %d\n", helper_group.devs[ i ] );
         CUDACHECK(cudaSetDevice( helper_group.devs[ i ] ));
     
         bool use_user_buffer = false;
-        for ( int j = 0; j < group.num_comm; ++j )
+        for ( int j = 0; j < group.num_comm; ++j ) // 0,1
         {
             // Use user group buffer 
             if ( group.devs[ j ] == helper_group.devs[ i ] )

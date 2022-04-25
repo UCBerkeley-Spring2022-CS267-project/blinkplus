@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
   for ( int i = 0; i < nDevs; ++i ) 
   {
     CUDACHECK(cudaSetDevice( devs[i] ));
-    CUDACHECK(cudaMalloc(sendbuff + i, size * sizeof(float)));
+    CUDACHECK(cudaMalloc(sendbuff + i, size * sizeof(float))); // &(sendbuff[i])
     CUDACHECK(cudaMalloc(recvbuff + i, size * sizeof(float)));
     CUDACHECK(cudaMemset(sendbuff[i], 1, size * sizeof(float)));
     CUDACHECK(cudaMemset(recvbuff[i], 0, size * sizeof(float)));
