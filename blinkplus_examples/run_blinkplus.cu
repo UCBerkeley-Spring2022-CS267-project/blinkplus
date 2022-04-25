@@ -31,6 +31,12 @@
 
 int main(int argc, char* argv[]) // char** argv
 {
+    if ( argc != 3 )
+    {
+      throw std::runtime_error("Usage: ./run_blinkplus GPUIDX1 GPUIDX2\n");
+      exit(-1);
+    }
+
     printf("NCCL Version %d.%d.%d\n", NCCL_MAJOR, NCCL_MINOR, NCCL_PATCH );
 
     // NCCL enviroment varaible
@@ -42,9 +48,11 @@ int main(int argc, char* argv[]) // char** argv
     // User allocate resources
     int total_data_size = 512*1024*1024;
     int num_comm = 2;
-    std::vector<int> devs = {0,1};
+    std::vector<int> devs = { atoi(argv[1]), atoi(argv[2]) };
     std::vector<ncclComm_t> comms( num_comm );
     std::vector<cudaStream_t> streams( num_comm );
+
+    printf("User GPU %d, %d\n", devs[0], devs[1]);
 
     printf("User init comm\n");
     NCCLCHECK(ncclCommInitAll( comms.data(), num_comm, devs.data() ));
@@ -54,7 +62,7 @@ int main(int argc, char* argv[]) // char** argv
     NCCLCHECK(blinkplusGetHelperCnt( comms.data(), num_comm, devs.data(), &num_helper ));
 
     printf("blink+ init comm and data on %d helper\n", num_helper );
-    NCCLCHECK(blinkplusCommInitAll( comms.data(), num_comm, devs.data(), num_helper ));
+    NCCLCHECK(blinkplusCommInitAll( comms.data(), num_comm, devs.data() ));
 
     printf("User user stream data\n");
     for ( int i = 0; i < num_comm; ++i )
@@ -89,10 +97,11 @@ int main(int argc, char* argv[]) // char** argv
     NCCLCHECK(ncclGroupStart());
     for ( int i = 0; i < num_comm; ++i ) 
     {
-        // [0] for user group
+        // sendbuffs[ 0 ] for user group
+        // devs[ 0 ] choose 0th device as root
         NCCLCHECK(ncclBroadcast((const void*)sendbuffs[ 0 ][ i ], \
                                 (void*)recvbuffs[ 0 ][ i ], \
-                                chunk_data_size, ncclInt, 0, \
+                                chunk_data_size, ncclInt, devs[ 0 ], \
                                 comms[i], \
                                 streams[i]));
     }
@@ -102,7 +111,7 @@ int main(int argc, char* argv[]) // char** argv
     // +1 to displace over [0] for user group
     NCCLCHECK( blinkplusBroadcast( comms.data(), num_comm, devs.data(), \
       (const void***)(sendbuffs.data() + 1), (void***)(recvbuffs.data() + 1), \
-      chunk_data_sizes.data(), ncclInt, 0 ) );
+      chunk_data_sizes.data(), ncclInt, devs[ 0 ] ) );
 
     printf("User run allreduce\n");
     NCCLCHECK(ncclGroupStart());

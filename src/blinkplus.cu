@@ -1,7 +1,9 @@
 
 #include <string>
+#include <map>
 #include <vector>
 #include <cstdlib> // std::getenv
+#include <utility> // std::make_pair
 #include <stdexcept> // std::runtime_error
 #include "blinkplus.h"
 
@@ -24,6 +26,7 @@
     }                                                 \
   } while(0)
 
+  #define BLINKPLUS_BUFFER_SIZE_BYTES 100000000 // 1GB
 
 struct blinkplusHelperGroup
 {
@@ -52,46 +55,87 @@ struct blinkplusHelperGroup
     }
 };
 
-// TODO improve this
+
+enum class blinkplusUserGroupType
+{
+  GROUP01,
+  GROUP12,
+};
+
+
 std::vector<blinkplusHelperGroup> blinkplusHelperGroupsContainer;
+blinkplusUserGroupType userGroupType;
 
-#define BLINKPLUS_BUFFER_SIZE_BYTES 100000000 // 1GB
-
+std::map<blinkplusUserGroupType, std::vector<std::pair<std::string, std::vector<int>>>> configs
+{
+  { blinkplusUserGroupType::GROUP01, 
+    std::vector<std::pair<std::string, std::vector<int>>>{
+      std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_021", std::vector<int>{0,2,1} ),
+      std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_031", std::vector<int>{0,3,1} ),
+      std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_0321", std::vector<int>{0,3,2,1} ),
+    } },
+  { blinkplusUserGroupType::GROUP12, 
+    std::vector<std::pair<std::string, std::vector<int>>>{
+      std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_102", std::vector<int>{1,0,2} ),
+      std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_123", std::vector<int>{1,2,3} ),
+    } },
+};
 
 // NCCL_API(ncclResult_t, blinkplusGetHelperCnt, ncclComm_t* comms, int ndev, const int *devlist, int* helper_cnt );
 ncclResult_t blinkplusGetHelperCnt( ncclComm_t* comm, int ndev, const int *devlist, int* helper_cnt )
 {
-  *helper_cnt = 3;
+  if ( ndev != 2 )
+  {
+    throw std::runtime_error("BLINK+ currently only support 2 GPU subset of 4 GPU case\n");
+  }
+
+  // Determine which user group is
+  if ( ( devlist[ 0 ] == 0 && devlist[ 1 ] == 1 ) || ( devlist[ 0 ] == 1 && devlist[ 1 ] == 0 ) )
+  {
+    userGroupType = blinkplusUserGroupType::GROUP01;
+  }
+  else if ( ( devlist[ 0 ] == 1 && devlist[ 1 ] == 2 ) || ( devlist[ 0 ] == 2 && devlist[ 1 ] == 1 ) )
+  {
+    userGroupType = blinkplusUserGroupType::GROUP12;
+  }
+  // TODO add more user group configuration here
+  else
+  {
+    throw std::runtime_error("User GPU group currently not supported\n");
+  }
+
+  *helper_cnt = configs.at( userGroupType ).size();
+
   return ncclSuccess;
 }
 
 
-// NCCL_API(ncclResult_t, blinkplusCommInitAll, ncclComm_t* comms, int ndev, const int* devlist, int numBlinkplusHelperGroup );
-ncclResult_t blinkplusCommInitAll( ncclComm_t* comms, int ndev, const int *devlist, int numBlinkplusHelperGroup )
+// NCCL_API(ncclResult_t, blinkplusCommInitAll, ncclComm_t* comms, int ndev, const int* devlist );
+ncclResult_t blinkplusCommInitAll( ncclComm_t* comms, int ndev, const int *devlist )
 {
   // Currently, lots of support is hardcoded
-  if (ndev != 2 ) 
+  // if (ndev != 2 ) 
+  // {
+  //   //WARN("Invalid device count requested : %d, need 2", ndev);
+  //   return ncclInvalidArgument;
+  // }
+  if ( ndev != 2 )
   {
-    //WARN("Invalid device count requested : %d, need 2", ndev);
-    return ncclInvalidArgument;
-  }
-
-  if ( numBlinkplusHelperGroup != 3 )
-  {
-    //WARN("Invalid helper group requested : %d, need 3", numBlinkplusHelperGroup );
-    return ncclInvalidArgument;
+    throw std::runtime_error("BLINK+ currently only support 2 GPU subset of 4 GPU case\n");
   }
 
   // Create blink+ helper group
   // return its corresbonding error code
   blinkplusHelperGroupsContainer.clear();
-  blinkplusHelperGroupsContainer.reserve( numBlinkplusHelperGroup );
+  blinkplusHelperGroupsContainer.reserve( configs.at( userGroupType ).size() );
   setenv( "NCCL_PROTO", "Simple", 1);
   setenv( "NCCL_ALGO", "Tree", 1 );
 
-  blinkplusHelperGroupsContainer.emplace_back( "BLINKPLUS_GRAPH_FILE_CHAIN_021", std::vector<int>{0,2,1} );
-  blinkplusHelperGroupsContainer.emplace_back( "BLINKPLUS_GRAPH_FILE_CHAIN_031", std::vector<int>{0,3,1} );
-  blinkplusHelperGroupsContainer.emplace_back( "BLINKPLUS_GRAPH_FILE_CHAIN_0321", std::vector<int>{0,3,2,1} );
+  for ( const auto& config_i : configs.at( userGroupType ) )
+  {
+    printf("Config i %s\n", config_i.first.c_str() );
+    blinkplusHelperGroupsContainer.emplace_back( config_i.first.c_str(), config_i.second );
+  }
 
   // Save user graph file for later use
   std::string userGraphFile;

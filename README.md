@@ -30,6 +30,8 @@ export BLINKPLUS_GRAPH_FILE_CHAIN_03=`pwd`/graphs/chain03.xml
 export BLINKPLUS_GRAPH_FILE_CHAIN_23=`pwd`/graphs/chain23.xml
 export BLINKPLUS_GRAPH_FILE_CHAIN_021=`pwd`/graphs/chain021.xml
 export BLINKPLUS_GRAPH_FILE_CHAIN_031=`pwd`/graphs/chain031.xml
+export BLINKPLUS_GRAPH_FILE_CHAIN_102=`pwd`/graphs/chain102.xml
+export BLINKPLUS_GRAPH_FILE_CHAIN_123=`pwd`/graphs/chain123.xml
 export BLINKPLUS_GRAPH_FILE_CHAIN_0321=`pwd`/graphs/chain0321.xml
 export BLINKPLUS_GRAPH_FILE_CHAIN_0123=`pwd`/graphs/chain0123.xml
 ```
