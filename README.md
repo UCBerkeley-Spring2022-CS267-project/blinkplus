@@ -4,7 +4,18 @@
 
 ## Install
 
-* Build blink+ package and intall package
+* Build nccl package v2.7.8
+
+We have prepared a NCCL package v2.7.8 with some bug fix [link](https://github.com/UCBerkeley-Spring2022-CS267-project/blinkplus-nccl-base)
+
+```shell
+git clone https://github.com/UCBerkeley-Spring2022-CS267-project/blinkplus-nccl-base.git
+cd blinkplus-nccl-base
+```
+
+and then follow the INSTALL.md file here [link](https://github.com/UCBerkeley-Spring2022-CS267-project/blinkplus-nccl-base/blob/blinkplus_base_v2.7.8/INSTALL.md) to install NCCL
+
+* Build blink+ example
 ```shell
 mkdir build
 cd build
@@ -13,13 +24,8 @@ make -j 10
 sudo make install
 ```
 
-* Build blink+ example
-```shell
-cd blinkplus_example
-cd build
-cmake .. -DCMAKE_CUDA_COMPILER=/usr/local/cuda-11.5/bin/nvcc -DCMAKE_BUILD_TYPE=Release
-make -j 10
-```
+The example is currently placed under `blinkplus_examples`
+
 
 * Export graph path
 

@@ -133,7 +133,7 @@ ncclResult_t blinkplusCommInitAll( ncclComm_t* comms, int ndev, const int *devli
 
   for ( const auto& config_i : configs.at( userGroupType ) )
   {
-    printf("Config i %s\n", config_i.first.c_str() );
+    //printf("Config i %s\n", config_i.first.c_str() );
     blinkplusHelperGroupsContainer.emplace_back( config_i.first.c_str(), config_i.second );
   }
 
