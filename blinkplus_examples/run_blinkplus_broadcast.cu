@@ -108,6 +108,8 @@ int main(int argc, char* argv[]) // char** argv
       (const void***)(sendbuffs.data() + 1), (void***)(recvbuffs.data() + 1), \
       chunk_data_sizes.data(), ncclInt, devs[ 0 ] ) );
 
+    int first_elasped = getTime() - start;
+    printf("Before Sync Elapsed Time: %.d \n", first_elasped);
     
     printf("User sync stream\n");
     for ( int i = 0; i < num_comm; ++i ) 
@@ -116,8 +118,8 @@ int main(int argc, char* argv[]) // char** argv
       CUDACHECK(cudaStreamSynchronize( streams[i]));
     }
 
-    int first_elasped = getTime() - start;
-    printf("First Elapsed Time: %.d \n", first_elasped);
+    int second_elasped = getTime() - start;
+    printf("After Sync Elapsed Time: %.d \n", second_elasped);
 
     printf("blink+ sync stream\n");
     NCCLCHECK( blinkplusStreamSynchronize( comms.data() ) );

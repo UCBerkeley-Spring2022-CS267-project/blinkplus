@@ -102,7 +102,7 @@ int main(int argc, char* argv[]) // char** argv
 
     printf("User run broadcast\n");
     int start = getTime();
-    
+
     NCCLCHECK(ncclGroupStart());
     for ( int i = 0; i < num_comm; ++i ) 
     {
@@ -116,8 +116,8 @@ int main(int argc, char* argv[]) // char** argv
     }
     NCCLCHECK(ncclGroupEnd());
 
-
-
+    int before_sync_elasped = getTime() - start;
+    printf("Before Sync Elapsed Time: %.d \n", before_sync_elasped);
 
     printf("User sync stream\n");
     for ( int i = 0; i < num_comm; ++i ) 
