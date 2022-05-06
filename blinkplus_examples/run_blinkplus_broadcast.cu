@@ -35,7 +35,6 @@ uint64_t getTime() {
         .count();
 }
 
-
 int main(int argc, char* argv[]) // char** argv
 {
     if ( argc != 3 )
@@ -100,33 +99,58 @@ int main(int argc, char* argv[]) // char** argv
       }
     }
 
-    printf("blink+ run broadcast\n");
     int start = getTime();
+    printf("User run broadcast\n");
+    // NCCLCHECK(ncclGroupStart());
+    // for ( int i = 0; i < num_comm; ++i ) 
+    // {
+    //     // sendbuffs[ 0 ] for user group
+    //     // devs[ 0 ] choose 0th device as root
+    //     NCCLCHECK(ncclBroadcast((const void*)sendbuffs[ 0 ][ i ], \
+    //                             (void*)recvbuffs[ 0 ][ i ], \
+    //                             chunk_data_size, ncclInt, devs[ 0 ], \
+    //                             comms[i], \
+    //                             streams[i]));
+    // }
+    // NCCLCHECK(ncclGroupEnd());
 
+    printf("blink+ run broadcast\n");
     // +1 to displace over [0] for user group
+    
     NCCLCHECK( blinkplusBroadcast( comms.data(), num_comm, devs.data(), \
       (const void***)(sendbuffs.data() + 1), (void***)(recvbuffs.data() + 1), \
       chunk_data_sizes.data(), ncclInt, devs[ 0 ] ) );
-
-    int first_elasped = getTime() - start;
-    printf("Before Sync Elapsed Time: %.d \n", first_elasped);
     
-    printf("User sync stream\n");
-    for ( int i = 0; i < num_comm; ++i ) 
-    {
-      CUDACHECK(cudaSetDevice( devs[i]));
-      CUDACHECK(cudaStreamSynchronize( streams[i]));
-    }
+    // printf("User run allreduce\n");
+    // NCCLCHECK(ncclGroupStart());
+    // for ( int i = 0; i < num_comm; ++i ) 
+    // {
+    //     NCCLCHECK(ncclAllReduce((const void*)sendbuffs[ 0 ][ i ], \
+    //                             (void*)recvbuffs[ 0 ][ i ], \
+    //                             chunk_data_size, ncclInt, ncclSum, \
+    //                             comms[i], \
+    //                             streams[i]));
+    // }
+    // NCCLCHECK(ncclGroupEnd());
+  
+    // printf("blink+ run allreduce\n");
+    //  // +1 to displace over [0] for user group
+    // NCCLCHECK( blinkplusAllReduce( comms.data(), num_comm, devs.data(), \
+    //   (const void***)(sendbuffs.data() + 1), (void***)(recvbuffs.data() + 1), \
+    //   chunk_data_sizes.data(), ncclInt, ncclSum ) );
 
-    int second_elasped = getTime() - start;
-    printf("After Sync Elapsed Time: %.d \n", second_elasped);
+    // printf("User sync stream\n");
+    // for ( int i = 0; i < num_comm; ++i ) 
+    // {
+    //   CUDACHECK(cudaSetDevice( devs[i]));
+    //   CUDACHECK(cudaStreamSynchronize( streams[i]));
+    // }
 
     printf("blink+ sync stream\n");
     NCCLCHECK( blinkplusStreamSynchronize( comms.data() ) );
 
     int elasped = getTime() - start;
     printf("Elapsed Time: %.d \n", elasped);
-
 
     printf("User free buffer\n");
     for ( int group_i = 0; group_i < sendbuffs.size(); ++group_i )
@@ -145,9 +169,9 @@ int main(int argc, char* argv[]) // char** argv
         ncclCommDestroy( comms[i]);
     }
 
-    
-    printf("blink+ free buffer and comm\n");
+    // printf("blink+ free buffer and comm\n");
     NCCLCHECK( blinkplusCommDestroy( comms.data(), num_comm, devs.data() ) );
+
     printf("Success \n");
     return 0;
 }
