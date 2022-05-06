@@ -23,16 +23,15 @@ include_directories( include )
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/blinkplus_examples )
 
 add_executable( run_blinkplus blinkplus_examples/run_blinkplus.cu src/blinkplus.cu )
-add_executable( run_baseline_broadcast blinkplus_examples/run_baseline_broadcast.cu src/blinkplus.cu )
 add_executable( run_blinkplus_broadcast blinkplus_examples/run_blinkplus_broadcast.cu src/blinkplus.cu )
-
+add_executable( run_nccl blinkplus_examples/run_nccl.cu src/blinkplus.cu )
 
 # I'm using C++11 in the test
 target_compile_features( run_blinkplus PRIVATE cxx_std_11)
-target_compile_features( run_baseline_broadcast PRIVATE cxx_std_11)
 target_compile_features( run_blinkplus_broadcast PRIVATE cxx_std_11)
+target_compile_features( run_nccl PRIVATE cxx_std_11)
 
 # link nccl
 target_link_libraries( run_blinkplus PRIVATE ${NCCL_LIBRARIES} )
-target_link_libraries( run_baseline_broadcast PRIVATE ${NCCL_LIBRARIES} )
 target_link_libraries( run_blinkplus_broadcast PRIVATE ${NCCL_LIBRARIES} )
+target_link_libraries( run_nccl PRIVATE ${NCCL_LIBRARIES} )
