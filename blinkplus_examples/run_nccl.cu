@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
     int devs[nDev] = {atoi(argv[1]), atoi(argv[2])};
     ncclComm_t comms[nDev];
 
-    printf("=========%s:: Initial data of size %d MB =========\n", __func__, int(atoi(argv[4]) * 4));
+    printf("=========%s:: Initial data of size %d MB=========\n", __func__, int(atoi(argv[4]) * 4));
 
     // allocating and initializing device buffers
     int **sendbuff = (int **) malloc(nDev * sizeof(int *));
