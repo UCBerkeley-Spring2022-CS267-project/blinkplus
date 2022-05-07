@@ -48,7 +48,7 @@ int main(int argc, char* argv[])
     int warm_up_iters = 5;
     int iters = atoi(argv[3]);
     int num_comm = 2;
-    std::vector<int> devs = { atoi(argv[1]), atoi(argv[2])};
+    std::vector<int> devs = {atoi(argv[1]), atoi(argv[2])};
     std::vector<ncclComm_t> comms( num_comm );
     std::vector<cudaStream_t> streams( num_comm );
 
@@ -96,16 +96,16 @@ int main(int argc, char* argv[])
       }
     }
 
-    printf("%s:: User init comm\n", __func__ );
+    //printf("%s:: User init comm\n", __func__ );
     NCCLCHECK(ncclCommInitAll( comms.data(), num_comm, devs.data() ));
 
-    printf("%s:: blink+ init comm and data on %d helper\n", __func__, num_helper );
+    //printf("%s:: blink+ init comm and data on %d helper\n", __func__, num_helper );
     NCCLCHECK(blinkplusCommInitAll( comms.data(), num_comm, devs.data() ));
 
 
     printf("=====Start WarmUp Iters: %d =====\n", warm_up_iters);
     for (int iter = 0; iter < warm_up_iters; iter++) {
-      printf("%s:: User run broadcast\n", __func__);
+      //printf("%s:: User run broadcast\n", __func__);
       NCCLCHECK(ncclGroupStart());
       for ( int i = 0; i < num_comm; ++i ) 
       {
@@ -118,19 +118,19 @@ int main(int argc, char* argv[])
                                   streams[i]));
       }
       NCCLCHECK(ncclGroupEnd());
-      printf("%s:: blink+ run broadcast\n", __func__);
+      //printf("%s:: blink+ run broadcast\n", __func__);
       // +1 to displace over [0] for user group
       NCCLCHECK( blinkplusBroadcast( comms.data(), num_comm, devs.data(), \
         (const void***)(sendbuffs.data() + 1), (void***)(recvbuffs.data() + 1), \
         chunk_data_sizes.data(), ncclInt, devs[ 0 ] ) );
 
-      printf("%s:: User sync stream\n", __func__);
+      //printf("%s:: User sync stream\n", __func__);
       for ( int i = 0; i < num_comm; ++i ) 
       {
         CUDACHECK(cudaSetDevice( devs[i]));
         CUDACHECK(cudaStreamSynchronize( streams[i]));
       }
-      printf("%s:: blink+ sync stream\n", __func__);
+      //printf("%s:: blink+ sync stream\n", __func__);
       NCCLCHECK( blinkplusStreamSynchronize( comms.data() ) );
     }
     printf("=====End WarmUp=====\n");
@@ -139,7 +139,7 @@ int main(int argc, char* argv[])
     printf("=====Start Timing, Iters: %d ======\n", iters);
     auto start = std::chrono::high_resolution_clock::now();
     for (int iter = 0; iter < iters; iter++) {
-      printf("%s:: User run broadcast\n", __func__);
+      //printf("%s:: User run broadcast\n", __func__);
       NCCLCHECK(ncclGroupStart());
       for ( int i = 0; i < num_comm; ++i ) 
       {
@@ -152,19 +152,19 @@ int main(int argc, char* argv[])
                                   streams[i]));
       }
       NCCLCHECK(ncclGroupEnd());
-      printf("%s:: blink+ run broadcast\n", __func__);
+      //printf("%s:: blink+ run broadcast\n", __func__);
       // +1 to displace over [0] for user group
       NCCLCHECK( blinkplusBroadcast( comms.data(), num_comm, devs.data(), \
         (const void***)(sendbuffs.data() + 1), (void***)(recvbuffs.data() + 1), \
         chunk_data_sizes.data(), ncclInt, devs[ 0 ] ) );
 
-      printf("%s:: User sync stream\n", __func__);
+      //printf("%s:: User sync stream\n", __func__);
       for ( int i = 0; i < num_comm; ++i ) 
       {
         CUDACHECK(cudaSetDevice( devs[i]));
         CUDACHECK(cudaStreamSynchronize( streams[i]));
       }
-      printf("%s:: blink+ sync stream\n", __func__);
+      //printf("%s:: blink+ sync stream\n", __func__);
       NCCLCHECK( blinkplusStreamSynchronize( comms.data() ) );
     }
 
@@ -173,10 +173,12 @@ int main(int argc, char* argv[])
     auto delta = std::chrono::high_resolution_clock::now() - start;
     double deltaSec = std::chrono::duration_cast<std::chrono::duration<double>>(delta).count();
     deltaSec = deltaSec / iters;
-    printf("%s:: Average of %d Iters, data: %d MB,  Elapsed Time: %7.5f (s)\n", __func__, iters, int(atoi(argv[4]) * 4), deltaSec);
+    double timeUsec = deltaSec*1.0E6;
+    double bw = total_data_size * sizeof(int) / 1.0E9 / deltaSec;
+    printf("%s:: Average of %d Iters, data: %d MB,  Elapsed Time: %7.5f (us), BandWidth: %7.5f (GB/s)\n", \
+                __func__, iters, int(atoi(argv[4]) * 4), timeUsec,  bw);
 
     printf("%s:: check data correctness after stream synchronize\n", __func__);
-    
     std::vector<int> h_recvbuff( chunk_data_size );
 
     for ( int group_i = 0; group_i < sendbuffs.size(); ++group_i )
@@ -200,7 +202,7 @@ int main(int argc, char* argv[])
       }
     }
 
-    printf("%s:: User free buffer\n", __func__);
+    //printf("%s:: User free buffer\n", __func__);
     for ( int group_i = 0; group_i < sendbuffs.size(); ++group_i )
     {
       for ( int comm_i = 0; comm_i < num_comm; ++comm_i )
@@ -211,13 +213,13 @@ int main(int argc, char* argv[])
       }
     }
 
-    printf("%s:: User free comm\n", __func__);
+    //printf("%s:: User free comm\n", __func__);
     for ( int i = 0; i < num_comm; ++i ) 
     {
         ncclCommDestroy( comms[i]);
     }
 
-    printf("%s:: blink+ free buffer and comm\n", __func__);
+    //printf("%s:: blink+ free buffer and comm\n", __func__);
     NCCLCHECK( blinkplusCommDestroy( comms.data(), num_comm, devs.data() ) );
 
     printf("%s:: Success \n", __func__);

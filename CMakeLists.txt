@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.0 )
 
+set(CMAKE_CUDA_ARCHITECTURES 72)
 # project name
 project( blinkplus LANGUAGES CXX CUDA )
 message(STATUS "CMAKE_CUDA_COMPILER ${CMAKE_CUDA_COMPILER}")
@@ -8,15 +9,15 @@ message(STATUS "CMAKE_CUDA_COMPILER ${CMAKE_CUDA_COMPILER}")
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/)
 
 # nccl
-find_package(nccl REQUIRED)
-if ( NCCL_FOUND )
-    message(STATUS "NCCL Found ${NCCL_INCLUDE_DIRS} ${NCCL_LIBRARIES}")
-else()
-    message(STATUS "NCCL Not Found")
-endif()
+# find_package(nccl REQUIRED)
+# if ( NCCL_FOUND )
+#     message(STATUS "NCCL Found ${NCCL_INCLUDE_DIRS} ${NCCL_LIBRARIES}")
+# else()
+#     message(STATUS "NCCL Not Found")
+# endif()
 
 # header
-include_directories( ${NCCL_INCLUDE_DIRS} )
+# include_directories( ${NCCL_INCLUDE_DIRS} )
 include_directories( include )
 
 # exec
@@ -32,6 +33,10 @@ target_compile_features( run_blinkplus_broadcast PRIVATE cxx_std_11)
 target_compile_features( run_nccl PRIVATE cxx_std_11)
 
 # link nccl
-target_link_libraries( run_blinkplus PRIVATE ${NCCL_LIBRARIES} )
-target_link_libraries( run_blinkplus_broadcast PRIVATE ${NCCL_LIBRARIES} )
-target_link_libraries( run_nccl PRIVATE ${NCCL_LIBRARIES} )
+target_link_libraries( run_blinkplus PRIVATE nccl )
+target_link_libraries( run_blinkplus_broadcast PRIVATE nccl )
+target_link_libraries( run_nccl PRIVATE nccl )
+
+# target_link_libraries( run_blinkplus PRIVATE ${NCCL_LIBRARIES} )
+# target_link_libraries( run_blinkplus_broadcast PRIVATE ${NCCL_LIBRARIES} )
+# target_link_libraries( run_nccl PRIVATE ${NCCL_LIBRARIES} )

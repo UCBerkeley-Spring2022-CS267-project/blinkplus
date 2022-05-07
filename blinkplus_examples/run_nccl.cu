@@ -129,16 +129,13 @@ int main(int argc, char *argv[]) {
     }
 
     printf("=====End Timing======\n");
-    // End timing
-    // This is only rouphy timing
-    //int elasped = getTime() - start;
-    //printf("%s:: Elapsed Time: %.d \n", __func__, elasped);
     auto delta = std::chrono::high_resolution_clock::now() - start;
     double deltaSec = std::chrono::duration_cast<std::chrono::duration<double>>(delta).count();
     deltaSec = deltaSec / iters;
     double timeUsec = deltaSec*1.0E6;
-    //printf("%s:: Average of %d Iters, data: %d MB,  Elapsed Time: %7.5f (s)\n", __func__, iters, int(atoi(argv[4]) * 4), deltaSec);
-    printf("%s:: Average of %d Iters, data: %d MB,  Elapsed Time: %7.5f (us)\n", __func__, iters, int(atoi(argv[4]) * 4), timeUsec);
+    double bw = size * sizeof(int) / 1.0E9 / deltaSec;
+    printf("%s:: Average of %d Iters, data: %d MB,  Elapsed Time: %7.5f (us), BandWidth: %7.5f (GB/s)\n", \
+                __func__, iters, int(atoi(argv[4]) * 4), timeUsec,  bw);
 
     // Copy data back to check data
     int *h_recvbuff = (int*)malloc(size * sizeof(int));
