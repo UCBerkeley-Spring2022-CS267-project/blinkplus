@@ -7,6 +7,7 @@
 #include <string>
 #include "cuda_runtime.h"
 #include "nccl.h"
+#include<chrono>
 
 #define CUDACHECK(cmd) do {                         \
   cudaError_t e = cmd;                              \
@@ -136,6 +137,12 @@ void free_nccl( group_info& group )
     }
 }
 
+uint64_t getTime() {
+    return std::chrono::duration_cast<std::chrono::microseconds>(
+              std::chrono::high_resolution_clock::now().time_since_epoch())
+        .count();
+}
+
 int main(int argc, char* argv[])
 {
     // Reference
@@ -169,26 +176,30 @@ int main(int argc, char* argv[])
     init_comm( group031 );
     init_comm( group0321 );
 
+    int start = getTime();
     // Collective run
     printf("\n\n!!!!!Run broadcast\n"); fflush(stdout);
-    run_broadcast( group01, data_size );
+    // run_broadcast( group01, data_size );
     run_broadcast( group021, data_size );
     run_broadcast( group031, data_size );
     run_broadcast( group0321, data_size );
 
     printf("\n\n!!!!!Run allreduce\n"); fflush( stdout );
-    run_reduce( group01, data_size );
+    // run_reduce( group01, data_size );
     run_reduce( group021, data_size );
     run_reduce( group031, data_size );
     run_reduce( group0321, data_size );
 
     // synchronize streams
     printf("\n\n!!!!!stream synchronize\n"); fflush(stdout);
-    sync_stream( group01 );
+    // sync_stream( group01 );
     sync_stream( group021 );
     sync_stream( group031 );
     sync_stream( group0321 );
 
+    int elasped = getTime() - start;
+    printf("Elapsed Time: %.d \n", elasped);
+    
     //free device buffers
     printf("\n\n!!!!!free used buffer\n"); fflush(stdout);
     free_buffer( group01 );

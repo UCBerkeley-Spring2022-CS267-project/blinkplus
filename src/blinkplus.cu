@@ -2,6 +2,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <cstdio> // printf
 #include <cstdlib> // std::getenv
 #include <utility> // std::make_pair
 #include <stdexcept> // std::runtime_error
@@ -92,10 +93,18 @@ ncclResult_t blinkplusGetHelperCnt( ncclComm_t* comm, int ndev, const int *devli
   // Determine which user group is
   if ( ( devlist[ 0 ] == 0 && devlist[ 1 ] == 1 ) || ( devlist[ 0 ] == 1 && devlist[ 1 ] == 0 ) )
   {
+    #ifndef NDEBUG
+    printf("%s:: set user group 01\n", __func__ );
+    #endif
+  
     userGroupType = blinkplusUserGroupType::GROUP01;
   }
   else if ( ( devlist[ 0 ] == 1 && devlist[ 1 ] == 2 ) || ( devlist[ 0 ] == 2 && devlist[ 1 ] == 1 ) )
   {
+    #ifndef NDEBUG
+    printf("%s:: set user group 12\n", __func__ );
+    #endif
+  
     userGroupType = blinkplusUserGroupType::GROUP12;
   }
   // TODO add more user group configuration here
@@ -133,7 +142,10 @@ ncclResult_t blinkplusCommInitAll( ncclComm_t* comms, int ndev, const int *devli
 
   for ( const auto& config_i : configs.at( userGroupType ) )
   {
-    //printf("Config i %s\n", config_i.first.c_str() );
+    #ifndef NDEBUG
+    printf("%s:: build blink+ helper group with graph %s\n", __func__, config_i.first.c_str() );
+    #endif
+
     blinkplusHelperGroupsContainer.emplace_back( config_i.first.c_str(), config_i.second );
   }
 
@@ -168,6 +180,11 @@ ncclResult_t blinkplusCommInitAll( ncclComm_t* comms, int ndev, const int *devli
       CUDACHECK(cudaSetDevice( helperGroupI( group_i ).devs[ comm_j ] ));
       if ( !use_user_buffer )
       {
+        #ifndef NDEBUG
+        printf("%s:: helper group %d, comm %d, dev %d use blink+ internal buffer\n", \
+          __func__, group_i, comm_j, helperGroupI( group_i ).devs[ comm_j ] );
+        #endif
+
         CUDACHECK(cudaMalloc( &(helperGroupI( group_i ).sendbuff.at( comm_j )), BLINKPLUS_BUFFER_SIZE_BYTES ));
         CUDACHECK(cudaMalloc( &(helperGroupI( group_i ).recvbuff.at( comm_j )), BLINKPLUS_BUFFER_SIZE_BYTES ));
         CUDACHECK(cudaMemset(   helperGroupI( group_i ).sendbuff.at( comm_j ), 0, BLINKPLUS_BUFFER_SIZE_BYTES ));
@@ -176,6 +193,11 @@ ncclResult_t blinkplusCommInitAll( ncclComm_t* comms, int ndev, const int *devli
       // set nullptr for safety
       else
       {
+        #ifndef NDEBUG
+        printf("%s:: helper group %d, comm %d, dev %d use user buffer\n", \
+          __func__, group_i, comm_j, helperGroupI( group_i ).devs[ comm_j ] );
+        #endif
+
         helperGroupI( group_i ).sendbuff.at( comm_j ) = nullptr;
         helperGroupI( group_i ).recvbuff.at( comm_j ) = nullptr;
       }
@@ -259,6 +281,10 @@ ncclResult_t  blinkplusBroadcast( ncclComm_t* comms, int ndev, const int *devlis
       {
         if ( devlist[ user_dev_k ] == helperGroupI( group_i ).devs[ comm_j ] )
         {
+          #ifndef NDEBUG
+          printf("%s::run broadcast group %d comm %d with user buffer\n", __func__, group_i, comm_j );
+          #endif
+
           use_user_buffer = true;
           NCCLCHECK(ncclBroadcast((const void*)sendbuff[ group_i ][ user_dev_k ], \
                                   (void*)recvbuff[ group_i ][ user_dev_k ], \
@@ -271,6 +297,10 @@ ncclResult_t  blinkplusBroadcast( ncclComm_t* comms, int ndev, const int *devlis
 
       if ( !use_user_buffer )
       {
+        #ifndef NDEBUG
+        printf("%s::run broadcast group %d comm %d with blink internal buffer\n", __func__, group_i, comm_j );
+        #endif
+
         NCCLCHECK(ncclBroadcast((const void*)helperGroupI( group_i ).sendbuff.at( comm_j ), \
                                 (void*)helperGroupI( group_i ).recvbuff.at( comm_j ), \
                                 count[ group_i ], datatype, root, \
@@ -347,8 +377,12 @@ ncclResult_t blinkplusStreamSynchronize( ncclComm_t* comms )
     // Synchronize for every communicator
     for ( int comm_j = 0; comm_j < helperGroupI( group_i ).num_comms; comm_j++ )
     {
-        CUDACHECK(cudaSetDevice( helperGroupI( group_i ).devs.at( comm_j ) ));
-        CUDACHECK(cudaStreamSynchronize( helperGroupI( group_i ).streams.at( comm_j ) ));
+      #ifndef NDEBUG
+      printf("%s:: group %d, comm %d call stream sync on dev %d\n", __func__, group_i, comm_j, helperGroupI( group_i ).devs.at( comm_j ) );
+      #endif
+
+      CUDACHECK(cudaSetDevice( helperGroupI( group_i ).devs.at( comm_j ) ));
+      CUDACHECK(cudaStreamSynchronize( helperGroupI( group_i ).streams.at( comm_j ) ));
     } // end for each comm/dev inside group
 
     #undef helperGroupI

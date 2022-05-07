@@ -5,10 +5,10 @@
 #include <vector>
 #include <cstdlib>
 #include <string>
+#include <chrono>
 #include "cuda_runtime.h"
 #include "nccl.h"
 #include "blinkplus.h"
-#include<chrono>
 
 #define CUDACHECK(cmd) do {                         \
   cudaError_t e = cmd;                              \
@@ -19,7 +19,6 @@
   }                                                 \
 } while(0)
 
-
 #define NCCLCHECK(cmd) do {                         \
   ncclResult_t r = cmd;                             \
   if (r!= ncclSuccess) {                            \
@@ -29,61 +28,57 @@
   }                                                 \
 } while(0)
 
-uint64_t getTime() {
-    return std::chrono::duration_cast<std::chrono::microseconds>(
-              std::chrono::high_resolution_clock::now().time_since_epoch())
-        .count();
+uint64_t getTime() 
+{
+  return std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::high_resolution_clock::now().time_since_epoch()).count();
 }
 
-int main(int argc, char* argv[]) // char** argv
+int main(int argc, char* argv[])
 {
-    if ( argc != 3 )
-    {
-      throw std::runtime_error("Usage: ./run_blinkplus GPUIDX1 GPUIDX2\n");
-      exit(-1);
-    }
-
-    printf("NCCL Version %d.%d.%d\n", NCCL_MAJOR, NCCL_MINOR, NCCL_PATCH );
-
-    // NCCL enviroment varaible
     // setenv( "NCCL_PROTO", "Simple", 1);
     // setenv( "NCCL_DEBUG", "Info", 1);
     // setenv( "NCCL_DEBUG_SUBSYS", "ALL", 1);
     // setenv( "NCCL_ALGO", "Ring", 1 );
 
+    printf("%s:: NCCL Version %d.%d.%d\n", __func__, NCCL_MAJOR, NCCL_MINOR, NCCL_PATCH );
+
     // User allocate resources
-    int total_data_size = 512*1024*1024;
+    int total_data_size = atoi(argv[4])*1024*1024;
+    int warm_up_iters = 5;
+    int iters = atoi(argv[3]);
     int num_comm = 2;
-    std::vector<int> devs = { atoi(argv[1]), atoi(argv[2]) };
+    std::vector<int> devs = { atoi(argv[1]), atoi(argv[2])};
     std::vector<ncclComm_t> comms( num_comm );
     std::vector<cudaStream_t> streams( num_comm );
 
-    printf("User GPU %d, %d\n", devs[0], devs[1]);
+    printf("%s:: User GPU %d, %d\n", __func__, devs[0], devs[1]);
 
-    printf("User init comm\n");
-    NCCLCHECK(ncclCommInitAll( comms.data(), num_comm, devs.data() ));
-
-    printf("Get number of blnk+ helper\n");
-    int num_helper;
-    NCCLCHECK(blinkplusGetHelperCnt( comms.data(), num_comm, devs.data(), &num_helper ));
-
-    printf("blink+ init comm and data on %d helper\n", num_helper );
-    NCCLCHECK(blinkplusCommInitAll( comms.data(), num_comm, devs.data() ));
-
-    printf("User user stream data\n");
+    printf("%s:: User user stream data\n", __func__ );
     for ( int i = 0; i < num_comm; ++i )
     {
         CUDACHECK(cudaSetDevice( devs[ i ] ));
-        CUDACHECK(cudaStreamCreateWithFlags( &(streams[i]), cudaStreamNonBlocking ));
+        CUDACHECK(cudaStreamCreate( &(streams[i]) ));
     }
 
-    printf("Initial data of size %d\n", total_data_size);
+    printf("%s:: Get number of blnk+ helper\n", __func__);
+    int num_helper;
+    NCCLCHECK(blinkplusGetHelperCnt( comms.data(), num_comm, devs.data(), &num_helper ));
+
+    printf("%d \n", atoi(argv[4]));
+    printf("=========%s:: Initial data of size %d MB=========\n", __func__, int(atoi(argv[4]) * 4));
     // currently ignore none dividable data case
     int chunk_data_size = total_data_size / (num_helper + 1);
 
     std::vector<int**> sendbuffs( num_helper + 1 );
     std::vector<int**> recvbuffs( num_helper + 1 );
     std::vector<int> chunk_data_sizes( chunk_data_size, (num_helper+1) );
+
+    std::vector<int> h_sendbuff( chunk_data_size );
+    for ( int i = 0; i < chunk_data_size; ++i )
+    {
+      h_sendbuff[ i ] = i;
+    }
 
     for ( int group_i = 0; group_i < sendbuffs.size(); ++group_i )
     {
@@ -92,67 +87,120 @@ int main(int argc, char* argv[]) // char** argv
 
       for ( int comm_i = 0; comm_i < num_comm; ++comm_i )
       {
-        CUDACHECK(cudaMalloc( (sendbuffs[ group_i ] + comm_i), chunk_data_size * sizeof(int)));
+        CUDACHECK(cudaSetDevice( devs[ comm_i ] ));
+        CUDACHECK(cudaMalloc( (sendbuffs[ group_i ] + comm_i), chunk_data_size * sizeof(int) ));
         CUDACHECK(cudaMalloc( (recvbuffs[ group_i ] + comm_i), chunk_data_size * sizeof(int)));
-        CUDACHECK(cudaMemset( sendbuffs[ group_i ][ comm_i ], 1, chunk_data_size * sizeof(int)));
-        CUDACHECK(cudaMemset( recvbuffs[ group_i ][ comm_i ], 0, chunk_data_size * sizeof(int)));    
+        //CUDACHECK(cudaMemset( sendbuffs[ group_i ][ comm_i ], 100, chunk_data_size * sizeof(int)));
+        CUDACHECK(cudaMemcpy(sendbuffs[ group_i ][ comm_i ], h_sendbuff.data(), chunk_data_size * sizeof(int), cudaMemcpyHostToDevice ));
+        CUDACHECK(cudaMemset( recvbuffs[ group_i ][ comm_i ], -1, chunk_data_size * sizeof(int)));    
       }
     }
 
-    int start = getTime();
-    printf("User run broadcast\n");
-    // NCCLCHECK(ncclGroupStart());
-    // for ( int i = 0; i < num_comm; ++i ) 
-    // {
-    //     // sendbuffs[ 0 ] for user group
-    //     // devs[ 0 ] choose 0th device as root
-    //     NCCLCHECK(ncclBroadcast((const void*)sendbuffs[ 0 ][ i ], \
-    //                             (void*)recvbuffs[ 0 ][ i ], \
-    //                             chunk_data_size, ncclInt, devs[ 0 ], \
-    //                             comms[i], \
-    //                             streams[i]));
-    // }
-    // NCCLCHECK(ncclGroupEnd());
+    printf("%s:: User init comm\n", __func__ );
+    NCCLCHECK(ncclCommInitAll( comms.data(), num_comm, devs.data() ));
 
-    printf("blink+ run broadcast\n");
-    // +1 to displace over [0] for user group
+    printf("%s:: blink+ init comm and data on %d helper\n", __func__, num_helper );
+    NCCLCHECK(blinkplusCommInitAll( comms.data(), num_comm, devs.data() ));
+
+
+    printf("=====Start WarmUp Iters: %d =====\n", warm_up_iters);
+    for (int iter = 0; iter < warm_up_iters; iter++) {
+      printf("%s:: User run broadcast\n", __func__);
+      NCCLCHECK(ncclGroupStart());
+      for ( int i = 0; i < num_comm; ++i ) 
+      {
+          // sendbuffs[ 0 ] for user group
+          // devs[ 0 ] choose 0th device as root
+          NCCLCHECK(ncclBroadcast((const void*)sendbuffs[ 0 ][ i ], \
+                                  (void*)recvbuffs[ 0 ][ i ], \
+                                  chunk_data_size, ncclInt, devs[ 0 ], \
+                                  comms[i], \
+                                  streams[i]));
+      }
+      NCCLCHECK(ncclGroupEnd());
+      printf("%s:: blink+ run broadcast\n", __func__);
+      // +1 to displace over [0] for user group
+      NCCLCHECK( blinkplusBroadcast( comms.data(), num_comm, devs.data(), \
+        (const void***)(sendbuffs.data() + 1), (void***)(recvbuffs.data() + 1), \
+        chunk_data_sizes.data(), ncclInt, devs[ 0 ] ) );
+
+      printf("%s:: User sync stream\n", __func__);
+      for ( int i = 0; i < num_comm; ++i ) 
+      {
+        CUDACHECK(cudaSetDevice( devs[i]));
+        CUDACHECK(cudaStreamSynchronize( streams[i]));
+      }
+      printf("%s:: blink+ sync stream\n", __func__);
+      NCCLCHECK( blinkplusStreamSynchronize( comms.data() ) );
+    }
+    printf("=====End WarmUp=====\n");
+
+    // Start timing
+    printf("=====Start Timing, Iters: %d ======\n", iters);
+    auto start = std::chrono::high_resolution_clock::now();
+    for (int iter = 0; iter < iters; iter++) {
+      printf("%s:: User run broadcast\n", __func__);
+      NCCLCHECK(ncclGroupStart());
+      for ( int i = 0; i < num_comm; ++i ) 
+      {
+          // sendbuffs[ 0 ] for user group
+          // devs[ 0 ] choose 0th device as root
+          NCCLCHECK(ncclBroadcast((const void*)sendbuffs[ 0 ][ i ], \
+                                  (void*)recvbuffs[ 0 ][ i ], \
+                                  chunk_data_size, ncclInt, devs[ 0 ], \
+                                  comms[i], \
+                                  streams[i]));
+      }
+      NCCLCHECK(ncclGroupEnd());
+      printf("%s:: blink+ run broadcast\n", __func__);
+      // +1 to displace over [0] for user group
+      NCCLCHECK( blinkplusBroadcast( comms.data(), num_comm, devs.data(), \
+        (const void***)(sendbuffs.data() + 1), (void***)(recvbuffs.data() + 1), \
+        chunk_data_sizes.data(), ncclInt, devs[ 0 ] ) );
+
+      printf("%s:: User sync stream\n", __func__);
+      for ( int i = 0; i < num_comm; ++i ) 
+      {
+        CUDACHECK(cudaSetDevice( devs[i]));
+        CUDACHECK(cudaStreamSynchronize( streams[i]));
+      }
+      printf("%s:: blink+ sync stream\n", __func__);
+      NCCLCHECK( blinkplusStreamSynchronize( comms.data() ) );
+    }
+
+    // End timing
+    printf("=====End Timing======\n");
+    auto delta = std::chrono::high_resolution_clock::now() - start;
+    double deltaSec = std::chrono::duration_cast<std::chrono::duration<double>>(delta).count();
+    deltaSec = deltaSec / iters;
+    printf("%s:: Average of %d Iters, data: %d MB,  Elapsed Time: %7.5f (s)\n", __func__, iters, int(atoi(argv[4]) * 4), deltaSec);
+
+    printf("%s:: check data correctness after stream synchronize\n", __func__);
     
-    NCCLCHECK( blinkplusBroadcast( comms.data(), num_comm, devs.data(), \
-      (const void***)(sendbuffs.data() + 1), (void***)(recvbuffs.data() + 1), \
-      chunk_data_sizes.data(), ncclInt, devs[ 0 ] ) );
-    
-    // printf("User run allreduce\n");
-    // NCCLCHECK(ncclGroupStart());
-    // for ( int i = 0; i < num_comm; ++i ) 
-    // {
-    //     NCCLCHECK(ncclAllReduce((const void*)sendbuffs[ 0 ][ i ], \
-    //                             (void*)recvbuffs[ 0 ][ i ], \
-    //                             chunk_data_size, ncclInt, ncclSum, \
-    //                             comms[i], \
-    //                             streams[i]));
-    // }
-    // NCCLCHECK(ncclGroupEnd());
-  
-    // printf("blink+ run allreduce\n");
-    //  // +1 to displace over [0] for user group
-    // NCCLCHECK( blinkplusAllReduce( comms.data(), num_comm, devs.data(), \
-    //   (const void***)(sendbuffs.data() + 1), (void***)(recvbuffs.data() + 1), \
-    //   chunk_data_sizes.data(), ncclInt, ncclSum ) );
+    std::vector<int> h_recvbuff( chunk_data_size );
 
-    // printf("User sync stream\n");
-    // for ( int i = 0; i < num_comm; ++i ) 
-    // {
-    //   CUDACHECK(cudaSetDevice( devs[i]));
-    //   CUDACHECK(cudaStreamSynchronize( streams[i]));
-    // }
+    for ( int group_i = 0; group_i < sendbuffs.size(); ++group_i )
+    {
+      if ( group_i != 0 )
+        continue;
 
-    printf("blink+ sync stream\n");
-    NCCLCHECK( blinkplusStreamSynchronize( comms.data() ) );
+      for ( int comm_i = 0; comm_i < num_comm; ++comm_i )
+      {
+        // Copy memory to cpu
+        CUDACHECK( cudaMemcpy( h_recvbuff.data(), recvbuffs[ group_i ][ comm_i ], chunk_data_size * sizeof( int ), cudaMemcpyDeviceToHost ));
+ 
+        // check result
+        for ( int i = 0; i < h_recvbuff.size(); ++i )
+        {
+          if ( h_recvbuff[i] != h_sendbuff[i] )
+          {
+            printf("%s:: Check recv on group %d, comm %d failed, expected %d but have %d\n", __func__, group_i, comm_i, h_sendbuff[i], h_recvbuff[i] );
+          }
+        }
+      }
+    }
 
-    int elasped = getTime() - start;
-    printf("Elapsed Time: %.d \n", elasped);
-
-    printf("User free buffer\n");
+    printf("%s:: User free buffer\n", __func__);
     for ( int group_i = 0; group_i < sendbuffs.size(); ++group_i )
     {
       for ( int comm_i = 0; comm_i < num_comm; ++comm_i )
@@ -163,15 +211,15 @@ int main(int argc, char* argv[]) // char** argv
       }
     }
 
-    printf("User free comm\n");
+    printf("%s:: User free comm\n", __func__);
     for ( int i = 0; i < num_comm; ++i ) 
     {
         ncclCommDestroy( comms[i]);
     }
 
-    // printf("blink+ free buffer and comm\n");
+    printf("%s:: blink+ free buffer and comm\n", __func__);
     NCCLCHECK( blinkplusCommDestroy( comms.data(), num_comm, devs.data() ) );
 
-    printf("Success \n");
+    printf("%s:: Success \n", __func__);
     return 0;
 }
