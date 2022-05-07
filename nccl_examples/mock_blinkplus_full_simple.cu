@@ -44,7 +44,7 @@ struct group_info
     {
         if ( std::getenv(graph_filepath_cstr) == nullptr )
         {
-            throw std::runtime_error("NCCL_GRAPH_FILE_CHAIN_021 not set\b");
+            throw std::runtime_error("BLINKPLUS_GRAPH_FILE_CHAIN_021 not set\b");
         }
         graph_filepath = std::getenv(graph_filepath_cstr);
 
@@ -158,10 +158,10 @@ int main(int argc, char* argv[])
     // managing 4 devices
     int data_size = 128*1024*1024;
 
-    group_info group01( "NCCL_GRAPH_FILE_CHAIN_01", std::vector<int>{0,1} );
-    group_info group021( "NCCL_GRAPH_FILE_CHAIN_021", std::vector<int>{0,2,1} );
-    group_info group031( "NCCL_GRAPH_FILE_CHAIN_031", std::vector<int>{0,3,1} );
-    group_info group0321( "NCCL_GRAPH_FILE_CHAIN_0321", std::vector<int>{0,3,2,1} );
+    group_info group01( "BLINKPLUS_GRAPH_FILE_CHAIN_01", std::vector<int>{0,1} );
+    group_info group021( "BLINKPLUS_GRAPH_FILE_CHAIN_021", std::vector<int>{0,2,1} );
+    group_info group031( "BLINKPLUS_GRAPH_FILE_CHAIN_031", std::vector<int>{0,3,1} );
+    group_info group0321( "BLINKPLUS_GRAPH_FILE_CHAIN_0321", std::vector<int>{0,3,2,1} );
 
     // Set and initial data
     init_data( group01, data_size );
