@@ -61,6 +61,10 @@ enum class blinkplusUserGroupType
 {
   GROUP01,
   GROUP12,
+  GROUP03,
+  GROUP23,
+  GROUP02,
+  GROUP13,
 };
 
 
@@ -73,13 +77,28 @@ std::map<blinkplusUserGroupType, std::vector<std::pair<std::string, std::vector<
     std::vector<std::pair<std::string, std::vector<int>>>{
       std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_021", std::vector<int>{0,2,1} ),
       std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_031", std::vector<int>{0,3,1} ),
-      std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_0321", std::vector<int>{0,3,2,1} ),
-    } },
+      std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_0321", std::vector<int>{0,3,2,1} ) } },
   { blinkplusUserGroupType::GROUP12, 
     std::vector<std::pair<std::string, std::vector<int>>>{
       std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_102", std::vector<int>{1,0,2} ),
-      std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_123", std::vector<int>{1,2,3} ),
-    } },
+      std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_132", std::vector<int>{1,3,2} ) } },
+  { blinkplusUserGroupType::GROUP03,
+      std::vector<std::pair<std::string, std::vector<int>>>{
+        std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_013", std::vector<int>{0,1,3} ),
+        std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_023", std::vector<int>{0,2,3} ) } },
+  { blinkplusUserGroupType::GROUP23,
+    std::vector<std::pair<std::string, std::vector<int>>>{
+      std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_203", std::vector<int>{2,0,3} ),
+      std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_213", std::vector<int>{2,1,3} ),
+      std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_2103", std::vector<int>{2,1,0,3} ) } },
+  { blinkplusUserGroupType::GROUP02,
+    std::vector<std::pair<std::string, std::vector<int>>>{
+      std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_032", std::vector<int>{0,3,2} ),
+      std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_012", std::vector<int>{0,1,2} ) } },
+  { blinkplusUserGroupType::GROUP13,
+    std::vector<std::pair<std::string, std::vector<int>>>{
+      std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_103", std::vector<int>{1,0,3} ),
+      std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_123", std::vector<int>{1,2,3} ) } },
 };
 
 // NCCL_API(ncclResult_t, blinkplusGetHelperCnt, ncclComm_t* comms, int ndev, const int *devlist, int* helper_cnt );
@@ -107,7 +126,38 @@ ncclResult_t blinkplusGetHelperCnt( ncclComm_t* comm, int ndev, const int *devli
   
     userGroupType = blinkplusUserGroupType::GROUP12;
   }
-  // TODO add more user group configuration here
+  else if ( ( devlist[ 0 ] == 0 && devlist[ 1 ] == 3 ) || ( devlist[ 0 ] == 3 && devlist[ 1 ] == 0 ) )
+  {
+    #ifndef NDEBUG
+    printf("%s:: set user group 03\n", __func__ );
+    #endif
+  
+    userGroupType = blinkplusUserGroupType::GROUP03;
+  }
+  else if ( ( devlist[ 0 ] == 2 && devlist[ 1 ] == 3 ) || ( devlist[ 0 ] == 3 && devlist[ 1 ] == 2 ) )
+  {
+    #ifndef NDEBUG
+    printf("%s:: set user group 23\n", __func__ );
+    #endif
+  
+    userGroupType = blinkplusUserGroupType::GROUP23;
+  }
+  else if ( ( devlist[ 0 ] == 0 && devlist[ 1 ] == 2 ) || ( devlist[ 0 ] == 2 && devlist[ 1 ] == 0 ) )
+  {
+    #ifndef NDEBUG
+    printf("%s:: set user group 02\n", __func__ );
+    #endif
+  
+    userGroupType = blinkplusUserGroupType::GROUP02;
+  }
+  else if ( ( devlist[ 0 ] == 1 && devlist[ 1 ] == 3 ) || ( devlist[ 0 ] == 3 && devlist[ 1 ] == 1 ) )
+  {
+    #ifndef NDEBUG
+    printf("%s:: set user group 13\n", __func__ );
+    #endif
+  
+    userGroupType = blinkplusUserGroupType::GROUP13;
+  }
   else
   {
     throw std::runtime_error("User GPU group currently not supported\n");
@@ -167,9 +217,9 @@ ncclResult_t blinkplusCommInitAll( ncclComm_t* comms, int ndev, const int *devli
       // Check if use user buffer or not. 
       // User will provide buffer at runtime
       bool use_user_buffer = false;
-      for ( int user_dev_k = 0; user_dev_k < ndev; ++user_dev_k )
+      for ( int user_comm_k = 0; user_comm_k < ndev; ++user_comm_k )
       {
-        if ( devlist[ user_dev_k ] == helperGroupI( group_i ).devs[ comm_j ] )
+        if ( devlist[ user_comm_k ] == helperGroupI( group_i ).devs[ comm_j ] )
         {
           use_user_buffer = true;
           break;
@@ -225,7 +275,7 @@ ncclResult_t blinkplusCommInitAll( ncclComm_t* comms, int ndev, const int *devli
 
 
 // NCCL_API(ncclResult_t, blinkplusCommDestroy, ncclComm_t* comms );
-ncclResult_t  blinkplusCommDestroy( ncclComm_t* comms, int ndev, const int *devlist )
+ncclResult_t blinkplusCommDestroy( ncclComm_t* comms, int ndev, const int *devlist )
 {
   for ( int group_i = 0; group_i < blinkplusHelperGroupsContainer.size(); ++group_i )
   {
@@ -234,9 +284,9 @@ ncclResult_t  blinkplusCommDestroy( ncclComm_t* comms, int ndev, const int *devl
     for ( int comm_j = 0; comm_j < helperGroupI( group_i ).num_comms; comm_j++ )
     {
       bool is_user_buffer = false;
-      for ( int user_dev_k = 0; user_dev_k < ndev; ++user_dev_k )
+      for ( int user_comm_k = 0; user_comm_k < ndev; ++user_comm_k )
       {
-        if ( devlist[ user_dev_k ] == helperGroupI( group_i ).devs[ comm_j ] )
+        if ( devlist[ user_comm_k ] == helperGroupI( group_i ).devs[ comm_j ] )
         {
           is_user_buffer = true;
           break;
@@ -264,7 +314,7 @@ ncclResult_t  blinkplusCommDestroy( ncclComm_t* comms, int ndev, const int *devl
 
 //NCCL_API(ncclResult_t, blinkplusBroadcast, ncclComm_t* comms, int ndev, const int* devlist, \
   const void*** sendbuff, void*** recvbuff, int* count, ncclDataType_t datatype, int root );
-ncclResult_t  blinkplusBroadcast( ncclComm_t* comms, int ndev, const int *devlist, \
+ncclResult_t blinkplusBroadcast( ncclComm_t* comms, int ndev, const int *devlist, \
     const void*** sendbuff, void*** recvbuff, int* count, ncclDataType_t datatype, int root )
 {
   // Start broadcast for each group
@@ -277,17 +327,17 @@ ncclResult_t  blinkplusBroadcast( ncclComm_t* comms, int ndev, const int *devlis
     for ( int comm_j = 0; comm_j < helperGroupI( group_i ).num_comms; comm_j++ )
     {
       bool use_user_buffer = false;
-      for ( int user_dev_k = 0; user_dev_k < ndev; ++user_dev_k )
+      for ( int user_comm_k = 0; user_comm_k < ndev; ++user_comm_k )
       {
-        if ( devlist[ user_dev_k ] == helperGroupI( group_i ).devs[ comm_j ] )
+        if ( devlist[ user_comm_k ] == helperGroupI( group_i ).devs[ comm_j ] )
         {
           #ifndef NDEBUG
           printf("%s::run broadcast group %d comm %d with user buffer\n", __func__, group_i, comm_j );
           #endif
 
           use_user_buffer = true;
-          NCCLCHECK(ncclBroadcast((const void*)sendbuff[ group_i ][ user_dev_k ], \
-                                  (void*)recvbuff[ group_i ][ user_dev_k ], \
+          NCCLCHECK(ncclBroadcast((const void*)sendbuff[ group_i ][ user_comm_k ], \
+                                  (void*)recvbuff[ group_i ][ user_comm_k ], \
                                   count[ group_i ], datatype, root, \
                                   helperGroupI( group_i ).comms.at( comm_j ), \
                                   helperGroupI( group_i ).streams.at( comm_j )));
@@ -334,13 +384,13 @@ ncclResult_t  blinkplusAllReduce( ncclComm_t* comms, int ndev, const int *devlis
     for ( int comm_j = 0; comm_j < helperGroupI( group_i ).num_comms; comm_j++ )
     {
       bool use_user_buffer = false;
-      for ( int user_dev_k = 0; user_dev_k < ndev; ++user_dev_k )
+      for ( int user_comm_k = 0; user_comm_k < ndev; ++user_comm_k )
       {
-        if ( devlist[ user_dev_k ] == helperGroupI( group_i ).devs[ comm_j ] )
+        if ( devlist[ user_comm_k ] == helperGroupI( group_i ).devs[ comm_j ] )
         {
           use_user_buffer = true;
-          NCCLCHECK(ncclAllReduce((const void*)sendbuff[ group_i ][ user_dev_k ], \
-                                  (void*)recvbuff[ group_i ][ user_dev_k ], \
+          NCCLCHECK(ncclAllReduce((const void*)sendbuff[ group_i ][ user_comm_k ], \
+                                  (void*)recvbuff[ group_i ][ user_comm_k ], \
                                   count[ group_i ], datatype, op, \
                                   helperGroupI( group_i ).comms.at( comm_j ), \
                                   helperGroupI( group_i ).streams.at( comm_j )));

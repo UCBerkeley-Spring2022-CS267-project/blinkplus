@@ -67,12 +67,12 @@ int main(int argc, char* argv[])
   }
 
   // Set enviroment variable to search
-  if ( std::getenv("NCCL_GRAPH_FILE_CHAIN_0123") == nullptr )
+  if ( std::getenv("BLINKPLUS_GRAPH_FILE_CHAIN_0123") == nullptr )
   {
-     throw std::runtime_error("NCCL_GRAPH_FILE_CHAIN_0123 not set\b");
+     throw std::runtime_error("BLINKPLUS_GRAPH_FILE_CHAIN_0123 not set\b");
   }
 
-  setenv( "NCCL_GRAPH_FILE", std::getenv("NCCL_GRAPH_FILE_CHAIN_0123") , 1 );
+  setenv( "NCCL_GRAPH_FILE", std::getenv("BLINKPLUS_GRAPH_FILE_CHAIN_0123") , 1 );
 
   //initializing NCCL
   printf("Initial comm\n"); fflush(stdout);

@@ -43,7 +43,7 @@ struct group_info
     {
         if ( std::getenv(graph_filepath_cstr) == nullptr )
         {
-            throw std::runtime_error("NCCL_GRAPH_FILE_CHAIN_021 not set\b");
+            throw std::runtime_error("BLINKPLUS_GRAPH_FILE_CHAIN_021 not set\b");
         }
         graph_filepath = std::getenv(graph_filepath_cstr);
 
@@ -224,18 +224,18 @@ int main(int argc, char* argv[])
     // set enviroment variable before run
     // this is program level setting and thus do not pollute global 
     setenv( "NCCL_PROTO", "Simple", 1);
-    //setenv( "NCCL_DEBUG", "Info", 1);
-    //setenv( "NCCL_DEBUG_SUBSYS", "ALL", 1);
+    // setenv( "NCCL_DEBUG", "Info", 1);
+    // setenv( "NCCL_DEBUG_SUBSYS", "ALL", 1);
     setenv( "NCCL_ALGO", "Tree", 1 ); // Tree : AllReduceTree+BroadcastRing | Ring : AllReduceRing+BroadcastRing
 
     // managing 4 devices
     int data_size = 256*1024*1024;
     int num_helper_group = 1;
 
-    group_info group01( "NCCL_GRAPH_FILE_CHAIN_01", std::vector<int>{0,1} );
-    group_info helper_group021( "NCCL_GRAPH_FILE_CHAIN_021", std::vector<int>{0,2,1} );
-    // group_info helper_group031( "NCCL_GRAPH_FILE_CHAIN_031", std::vector<int>{0,3,1} );
-    // group_info helper_group0321( "NCCL_GRAPH_FILE_CHAIN_0321", std::vector<int>{0,3,2,1} );
+    group_info group01( "BLINKPLUS_GRAPH_FILE_CHAIN_01", std::vector<int>{0,1} );
+    group_info helper_group021( "BLINKPLUS_GRAPH_FILE_CHAIN_021", std::vector<int>{0,2,1} );
+    // group_info helper_group031( "BLINKPLUS_GRAPH_FILE_CHAIN_031", std::vector<int>{0,3,1} );
+    // group_info helper_group0321( "BLINKPLUS_GRAPH_FILE_CHAIN_0321", std::vector<int>{0,3,2,1} );
 
     // Set and initial data
     init_data( group01, data_size );

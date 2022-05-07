@@ -30,14 +30,23 @@ The example is currently placed under `blinkplus_examples`
 * Export graph path
 
 ```shell
-export BLINKPLUS_GRAPH_FILE_CHAIN_01=`pwd`/graphs/chain01.xml
-export BLINKPLUS_GRAPH_FILE_CHAIN_02=`pwd`/graphs/chain02.xml
-export BLINKPLUS_GRAPH_FILE_CHAIN_03=`pwd`/graphs/chain03.xml
-export BLINKPLUS_GRAPH_FILE_CHAIN_23=`pwd`/graphs/chain23.xml
-export BLINKPLUS_GRAPH_FILE_CHAIN_021=`pwd`/graphs/chain021.xml
-export BLINKPLUS_GRAPH_FILE_CHAIN_031=`pwd`/graphs/chain031.xml
-export BLINKPLUS_GRAPH_FILE_CHAIN_102=`pwd`/graphs/chain102.xml
-export BLINKPLUS_GRAPH_FILE_CHAIN_123=`pwd`/graphs/chain123.xml
-export BLINKPLUS_GRAPH_FILE_CHAIN_0321=`pwd`/graphs/chain0321.xml
-export BLINKPLUS_GRAPH_FILE_CHAIN_0123=`pwd`/graphs/chain0123.xml
+export BLINKPLUS_GRAPH_FILE_CHAIN_021=`pwd`/graphs/user01/chain021.xml
+export BLINKPLUS_GRAPH_FILE_CHAIN_031=`pwd`/graphs/user01/chain031.xml
+export BLINKPLUS_GRAPH_FILE_CHAIN_0321=`pwd`/graphs/user01/chain0321.xml
+
+export BLINKPLUS_GRAPH_FILE_CHAIN_102=`pwd`/graphs/user12/chain102.xml
+export BLINKPLUS_GRAPH_FILE_CHAIN_132=`pwd`/graphs/user12/chain132.xml
+
+export BLINKPLUS_GRAPH_FILE_CHAIN_013=`pwd`/graphs/user03/chain013.xml
+export BLINKPLUS_GRAPH_FILE_CHAIN_023=`pwd`/graphs/user03/chain023.xml
+
+export BLINKPLUS_GRAPH_FILE_CHAIN_203=`pwd`/graphs/user23/chain203.xml
+export BLINKPLUS_GRAPH_FILE_CHAIN_213=`pwd`/graphs/user23/chain213.xml
+export BLINKPLUS_GRAPH_FILE_CHAIN_2103=`pwd`/graphs/user23/chain2103.xml
+
+export BLINKPLUS_GRAPH_FILE_CHAIN_032=`pwd`/graphs/user02/chain032.xml
+export BLINKPLUS_GRAPH_FILE_CHAIN_012=`pwd`/graphs/user02/chain012.xml
+
+export BLINKPLUS_GRAPH_FILE_CHAIN_103=`pwd`/graphs/user13/chain103.xml
+export BLINKPLUS_GRAPH_FILE_CHAIN_123=`pwd`/graphs/user13/chain123.xml
 ```
