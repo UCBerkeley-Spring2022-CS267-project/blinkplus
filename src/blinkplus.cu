@@ -332,7 +332,7 @@ ncclResult_t blinkplusBroadcast( ncclComm_t* comms, int ndev, const int *devlist
         if ( devlist[ user_comm_k ] == helperGroupI( group_i ).devs[ comm_j ] )
         {
           #ifndef NDEBUG
-          printf("%s::run broadcast group %d comm %d with user buffer\n", __func__, group_i, comm_j );
+          printf("%s::run broadcast group %d comm %d with user buffer, size: %d\n", __func__, group_i, comm_j, count[ group_i ] );
           #endif
 
           use_user_buffer = true;
@@ -348,7 +348,7 @@ ncclResult_t blinkplusBroadcast( ncclComm_t* comms, int ndev, const int *devlist
       if ( !use_user_buffer )
       {
         #ifndef NDEBUG
-        printf("%s::run broadcast group %d comm %d with blink internal buffer\n", __func__, group_i, comm_j );
+        printf("%s::run broadcast group %d comm %d with blink internal buffer, size: %d\n", __func__, group_i, comm_j, count[ group_i ] );
         #endif
 
         NCCLCHECK(ncclBroadcast((const void*)helperGroupI( group_i ).sendbuff.at( comm_j ), \

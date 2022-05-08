@@ -36,10 +36,10 @@ uint64_t getTime()
 
 int main(int argc, char* argv[])
 {
-    // setenv( "NCCL_PROTO", "Simple", 1);
+    setenv( "NCCL_PROTO", "Simple", 1);
     // setenv( "NCCL_DEBUG", "Info", 1);
     // setenv( "NCCL_DEBUG_SUBSYS", "ALL", 1);
-    // setenv( "NCCL_ALGO", "Ring", 1 );
+    setenv( "NCCL_ALGO", "Tree", 1 );
 
     printf("%s:: NCCL Version %d.%d.%d\n", __func__, NCCL_MAJOR, NCCL_MINOR, NCCL_PATCH );
 
@@ -72,7 +72,8 @@ int main(int argc, char* argv[])
 
     std::vector<int**> sendbuffs( num_helper + 1 );
     std::vector<int**> recvbuffs( num_helper + 1 );
-    std::vector<int> chunk_data_sizes( chunk_data_size, (num_helper+1) );
+    //std::vector<int> chunk_data_sizes( chunk_data_size, (num_helper+1) );
+    std::vector<int> chunk_data_sizes( (num_helper+1), chunk_data_size);
 
     std::vector<int> h_sendbuff( chunk_data_size );
     for ( int i = 0; i < chunk_data_size; ++i )
