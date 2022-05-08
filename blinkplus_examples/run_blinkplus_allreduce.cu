@@ -72,7 +72,8 @@ int main(int argc, char* argv[])
 
     std::vector<int**> sendbuffs( num_helper + 1 );
     std::vector<int**> recvbuffs( num_helper + 1 );
-    std::vector<int> chunk_data_sizes( chunk_data_size, (num_helper+1) );
+    //std::vector<int> chunk_data_sizes( chunk_data_size, (num_helper+1) );
+    std::vector<int> chunk_data_sizes((num_helper+1),  chunk_data_size);
 
     std::vector<int> h_sendbuff( chunk_data_size );
     // for ( int i = 0; i < chunk_data_size; ++i )
