@@ -1,0 +1,132 @@
+main:: NCCL Version 2.7.8
+main:: User GPU 0, 3
+main:: User user stream data
+=========main:: Initial data of size 1 MB=========
+=====Start WarmUp Iters: 5 =====
+main:: Synchronize warmup
+=====End WarmUp=====
+=====Start Timing, Iters: 20 ======
+=====End Timing======
+main:: Average of 20 Iters, data: 1 MB,  Elapsed Time: 68.86720 (us), BandWidth: 15.22606 (GB/s)
+main:: check data correctness after stream synchronize
+main:: Success 
+main:: NCCL Version 2.7.8
+main:: User GPU 0, 3
+main:: User user stream data
+=========main:: Initial data of size 2 MB=========
+=====Start WarmUp Iters: 5 =====
+main:: Synchronize warmup
+=====End WarmUp=====
+=====Start Timing, Iters: 20 ======
+=====End Timing======
+main:: Average of 20 Iters, data: 2 MB,  Elapsed Time: 98.70575 (us), BandWidth: 21.24650 (GB/s)
+main:: check data correctness after stream synchronize
+main:: Success 
+main:: NCCL Version 2.7.8
+main:: User GPU 0, 3
+main:: User user stream data
+=========main:: Initial data of size 4 MB=========
+=====Start WarmUp Iters: 5 =====
+main:: Synchronize warmup
+=====End WarmUp=====
+=====Start Timing, Iters: 20 ======
+=====End Timing======
+main:: Average of 20 Iters, data: 4 MB,  Elapsed Time: 153.86625 (us), BandWidth: 27.25942 (GB/s)
+main:: check data correctness after stream synchronize
+main:: Success 
+main:: NCCL Version 2.7.8
+main:: User GPU 0, 3
+main:: User user stream data
+=========main:: Initial data of size 8 MB=========
+=====Start WarmUp Iters: 5 =====
+main:: Synchronize warmup
+=====End WarmUp=====
+=====Start Timing, Iters: 20 ======
+=====End Timing======
+main:: Average of 20 Iters, data: 8 MB,  Elapsed Time: 253.44655 (us), BandWidth: 33.09813 (GB/s)
+main:: check data correctness after stream synchronize
+main:: Success 
+main:: NCCL Version 2.7.8
+main:: User GPU 0, 3
+main:: User user stream data
+=========main:: Initial data of size 16 MB=========
+=====Start WarmUp Iters: 5 =====
+main:: Synchronize warmup
+=====End WarmUp=====
+=====Start Timing, Iters: 20 ======
+=====End Timing======
+main:: Average of 20 Iters, data: 16 MB,  Elapsed Time: 466.66850 (us), BandWidth: 35.95104 (GB/s)
+main:: check data correctness after stream synchronize
+main:: Success 
+main:: NCCL Version 2.7.8
+main:: User GPU 0, 3
+main:: User user stream data
+=========main:: Initial data of size 32 MB=========
+=====Start WarmUp Iters: 5 =====
+main:: Synchronize warmup
+=====End WarmUp=====
+=====Start Timing, Iters: 20 ======
+=====End Timing======
+main:: Average of 20 Iters, data: 32 MB,  Elapsed Time: 838.08320 (us), BandWidth: 40.03711 (GB/s)
+main:: check data correctness after stream synchronize
+main:: Success 
+main:: NCCL Version 2.7.8
+main:: User GPU 0, 3
+main:: User user stream data
+=========main:: Initial data of size 64 MB=========
+=====Start WarmUp Iters: 5 =====
+main:: Synchronize warmup
+=====End WarmUp=====
+=====Start Timing, Iters: 20 ======
+=====End Timing======
+main:: Average of 20 Iters, data: 64 MB,  Elapsed Time: 1578.61510 (us), BandWidth: 42.51123 (GB/s)
+main:: check data correctness after stream synchronize
+main:: Success 
+main:: NCCL Version 2.7.8
+main:: User GPU 0, 3
+main:: User user stream data
+=========main:: Initial data of size 128 MB=========
+=====Start WarmUp Iters: 5 =====
+main:: Synchronize warmup
+=====End WarmUp=====
+=====Start Timing, Iters: 20 ======
+=====End Timing======
+main:: Average of 20 Iters, data: 128 MB,  Elapsed Time: 3043.36645 (us), BandWidth: 44.10173 (GB/s)
+main:: check data correctness after stream synchronize
+main:: Success 
+main:: NCCL Version 2.7.8
+main:: User GPU 0, 3
+main:: User user stream data
+=========main:: Initial data of size 256 MB=========
+=====Start WarmUp Iters: 5 =====
+main:: Synchronize warmup
+=====End WarmUp=====
+=====Start Timing, Iters: 20 ======
+=====End Timing======
+main:: Average of 20 Iters, data: 256 MB,  Elapsed Time: 5975.37915 (us), BandWidth: 44.92359 (GB/s)
+main:: check data correctness after stream synchronize
+main:: Success 
+main:: NCCL Version 2.7.8
+main:: User GPU 0, 3
+main:: User user stream data
+=========main:: Initial data of size 512 MB=========
+=====Start WarmUp Iters: 5 =====
+main:: Synchronize warmup
+=====End WarmUp=====
+=====Start Timing, Iters: 20 ======
+=====End Timing======
+main:: Average of 20 Iters, data: 512 MB,  Elapsed Time: 11839.47860 (us), BandWidth: 45.34582 (GB/s)
+main:: check data correctness after stream synchronize
+main:: Success 
+main:: NCCL Version 2.7.8
+main:: User GPU 0, 3
+main:: User user stream data
+=========main:: Initial data of size 1024 MB=========
+=====Start WarmUp Iters: 5 =====
+main:: Synchronize warmup
+=====End WarmUp=====
+=====Start Timing, Iters: 20 ======
+=====End Timing======
+main:: Average of 20 Iters, data: 1024 MB,  Elapsed Time: 23573.31510 (us), BandWidth: 45.54904 (GB/s)
+main:: check data correctness after stream synchronize
+main:: Success 

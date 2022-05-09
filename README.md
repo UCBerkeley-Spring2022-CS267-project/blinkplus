@@ -52,3 +52,20 @@ export BLINKPLUS_GRAPH_FILE_CHAIN_012=`pwd`/graphs/user02/chain012.xml
 export BLINKPLUS_GRAPH_FILE_CHAIN_103=`pwd`/graphs/user13/chain103.xml
 export BLINKPLUS_GRAPH_FILE_CHAIN_123=`pwd`/graphs/user13/chain123.xml
 ```
+
+
+## Experiment
+```shell
+cd test_bandwidth
+bash blinkplus_optimal_broadcast_timing.sh
+bash blinkplus_optimal_allreduce_timing.sh
+
+bash nccl_allreduce_timing.sh
+bash nccl_broadcast_timing.sh
+```
+
+## Visualization
+Run the notebook 
+```shell
+visualization/test_bandwidth.ipynb
+```
