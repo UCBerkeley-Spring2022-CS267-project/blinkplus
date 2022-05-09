@@ -254,7 +254,7 @@ int main(int argc, char* argv[])
       deltaSec = deltaSec / num_iters;
       double timeUsec = deltaSec*1.0E6;
       double bw = total_data_size / 4 * 2 * sizeof(uint8_t) / 1.0E9 / deltaSec;
-      printf("%s:: Average of %d Iters, data: %d MB,  Elapsed Time: %7.5f (us), BandWidth: %7.5f (GB/s)\n", \
+      printf("%s:: User Average of %d Iters, data: %d MB,  Elapsed Time: %7.5f (us), BandWidth: %7.5f (GB/s)\n", \
                   __func__, num_iters, int(atoi(argv[5]) / 4 * 2 * sizeof(uint8_t)), timeUsec,  bw);  
     }
 
@@ -272,13 +272,13 @@ int main(int argc, char* argv[])
 
     // End timing
     {
-      printf("=====End Timing Two Helper======\n");
+      printf("=====End Timing (Total) Two Helper======\n");
       auto delta = std::chrono::high_resolution_clock::now() - start;
       double deltaSec = std::chrono::duration_cast<std::chrono::duration<double>>(delta).count();
       deltaSec = deltaSec / num_iters;
       double timeUsec = deltaSec*1.0E6;
       double bw = total_data_size * sizeof(uint8_t) / 1.0E9 / deltaSec;
-      printf("%s:: Average of %d Iters, data: %d MB,  Elapsed Time: %7.5f (us), BandWidth: %7.5f (GB/s)\n", \
+      printf("%s:: Total Average of %d Iters, data: %d MB,  Elapsed Time: %7.5f (us), BandWidth: %7.5f (GB/s)\n", \
                   __func__, num_iters, int(atoi(argv[5]) * sizeof(uint8_t)), timeUsec,  bw);
     }
 

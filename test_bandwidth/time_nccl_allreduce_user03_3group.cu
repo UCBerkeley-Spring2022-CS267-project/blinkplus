@@ -205,7 +205,7 @@ int main(int argc, char* argv[])
       deltaSec = deltaSec / num_iters;
       double timeUsec = deltaSec*1.0E6;
       double bw = total_data_size / 3 * 2 * sizeof(uint8_t) / 1.0E9 / deltaSec;
-      printf("%s:: Average of %d Iters, data: %d MB,  Elapsed Time: %7.5f (us), BandWidth: %7.5f (GB/s)\n", \
+      printf("%s:: User Average of %d Iters, data: %d MB,  Elapsed Time: %7.5f (us), BandWidth: %7.5f (GB/s)\n", \
                   __func__, num_iters, int(atoi(argv[5]) / 3 * 2 * sizeof(uint8_t)), timeUsec,  bw);  
     }
 
@@ -223,7 +223,7 @@ int main(int argc, char* argv[])
       deltaSec = deltaSec / num_iters;
       double timeUsec = deltaSec*1.0E6;
       double bw = total_data_size * sizeof(uint8_t) / 1.0E9 / deltaSec;
-      printf("%s:: Average of %d Iters, data: %d MB,  Elapsed Time: %7.5f (us), BandWidth: %7.5f (GB/s)\n", \
+      printf("%s:: Total Average of %d Iters, data: %d MB,  Elapsed Time: %7.5f (us), BandWidth: %7.5f (GB/s)\n", \
                   __func__, num_iters, int(atoi(argv[5]) * sizeof(uint8_t)), timeUsec,  bw);
     }
 

@@ -323,17 +323,17 @@ int main(int argc, char* argv[])
       CUDACHECK(cudaStreamSynchronize( user_group_streams[i]));
     }
 
-    // // End timing
-    // {
-    //   printf("=====End Timing User======\n");
-    //   auto delta = std::chrono::high_resolution_clock::now() - start;
-    //   double deltaSec = std::chrono::duration_cast<std::chrono::duration<double>>(delta).count();
-    //   deltaSec = deltaSec / num_iters;
-    //   double timeUsec = deltaSec*1.0E6;
-    //   double bw = total_data_size / 4 * sizeof(uint8_t) / 1.0E9 / deltaSec;
-    //   printf("%s:: Average of %d Iters, data: %d MB,  Elapsed Time: %7.5f (us), BandWidth: %7.5f (GB/s)\n", \
-    //               __func__, num_iters, int(atoi(argv[5]) / 4 * sizeof(uint8_t)), timeUsec,  bw);  
-    // }
+    // End timing
+    {
+      printf("=====End Timing User======\n");
+      auto delta = std::chrono::high_resolution_clock::now() - start;
+      double deltaSec = std::chrono::duration_cast<std::chrono::duration<double>>(delta).count();
+      deltaSec = deltaSec / num_iters;
+      double timeUsec = deltaSec*1.0E6;
+      double bw = total_data_size / 4 * sizeof(uint8_t) / 1.0E9 / deltaSec;
+      printf("%s:: User Average of %d Iters, data: %d MB,  Elapsed Time: %7.5f (us), BandWidth: %7.5f (GB/s)\n", \
+                  __func__, num_iters, int(atoi(argv[5]) / 4 * sizeof(uint8_t)), timeUsec,  bw);  
+    }
 
     for ( int i = 0; i < helper_group_1_num_comm; ++i ) 
     {
@@ -366,13 +366,13 @@ int main(int argc, char* argv[])
     }
 
     // End timing
-    printf("=====End Timing Total======\n");
+    printf("=====End Timing Total (Three Helper)======\n");
     auto delta = std::chrono::high_resolution_clock::now() - start;
     double deltaSec = std::chrono::duration_cast<std::chrono::duration<double>>(delta).count();
     deltaSec = deltaSec / num_iters;
     double timeUsec = deltaSec*1.0E6;
     double bw = total_data_size * sizeof(uint8_t) / 1.0E9 / deltaSec;
-    printf("%s:: Average of %d Iters, data: %d MB,  Elapsed Time: %7.5f (us), BandWidth: %7.5f (GB/s)\n", \
+    printf("%s:: Total Average of %d Iters, data: %d MB,  Elapsed Time: %7.5f (us), BandWidth: %7.5f (GB/s)\n", \
                 __func__, num_iters, int(atoi(argv[5]) * sizeof(uint8_t)), timeUsec,  bw);
 
     printf("%s:: check data correctness after stream synchronize\n", __func__);
