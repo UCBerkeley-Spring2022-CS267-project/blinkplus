@@ -53,6 +53,28 @@ struct blinkplusHelperGroup
 };
 
 
+std::vector<blinkplusHelperGroup> blinkplusHelperGroupsContainer;
+
+
+ncclResult_t blinkplusStreamSynchronize( )
+{
+  for ( int group_i = 0; group_i < blinkplusHelperGroupsContainer.size(); ++group_i )
+  {  
+    for ( int comm_j = 0; comm_j < blinkplusHelperGroupsContainer.at( group_i ).num_comms; comm_j++ )
+    {
+      #ifndef NDEBUG
+      printf("%s:: group %d, comm %d call stream sync on dev %d\n", \
+        __func__, group_i, comm_j, blinkplusHelperGroupsContainer.at( group_i ).devs.at( comm_j ) );
+      #endif
+
+      CUDACHECK(cudaSetDevice( blinkplusHelperGroupsContainer.at( group_i ).devs.at( comm_j ) ));
+      CUDACHECK(cudaStreamSynchronize( blinkplusHelperGroupsContainer.at( group_i ).streams.at( comm_j ) ));
+    }
+  }
+  return ncclSuccess;
+}
+
+
 int main(int argc, char* argv[])
 {
     if ( argc != 6 )
@@ -71,13 +93,20 @@ int main(int argc, char* argv[])
     int num_warmup = atoi( argv[3] );
     int num_iters = atoi( argv[4] );
   
+    blinkplusHelperGroupsContainer.clear();
+    blinkplusHelperGroupsContainer.reserve(2);
+
     blinkplusHelperGroup user_group( "BLINKPLUS_GRAPH_FILE_CHAIN_01", std::vector<int>{0,1});
-    blinkplusHelperGroup helper_group1( "BLINKPLUS_GRAPH_FILE_CHAIN_021", std::vector<int>{0,2,1});
-    blinkplusHelperGroup helper_group2( "BLINKPLUS_GRAPH_FILE_CHAIN_031", std::vector<int>{0,3,1});
+    blinkplusHelperGroupsContainer.emplace_back( "BLINKPLUS_GRAPH_FILE_CHAIN_021", std::vector<int>{0,2,1} );
+    blinkplusHelperGroupsContainer.emplace_back( "BLINKPLUS_GRAPH_FILE_CHAIN_031", std::vector<int>{0,3,1} );
 
     printf("%s:: User GPU %d, %d\n", __func__, user_group.devs[0], user_group.devs[1]);
-    printf("%s:: Helper 1 GPU %d, %d, %d\n", __func__, helper_group1.devs[0], helper_group1.devs[1], helper_group1.devs[2]);
-    printf("%s:: Helper 2 GPU %d, %d, %d\n", __func__, helper_group2.devs[0], helper_group2.devs[1], helper_group2.devs[2]);
+    printf("%s:: Helper 1 GPU %d, %d, %d\n", __func__, blinkplusHelperGroupsContainer[ 0 ].devs[0], \
+                                                       blinkplusHelperGroupsContainer[ 0 ].devs[1], \
+                                                       blinkplusHelperGroupsContainer[ 0 ].devs[2]);
+    printf("%s:: Helper 2 GPU %d, %d, %d\n", __func__, blinkplusHelperGroupsContainer[ 1 ].devs[0], \
+                                                       blinkplusHelperGroupsContainer[ 1 ].devs[1], \
+                                                       blinkplusHelperGroupsContainer[ 1 ].devs[2]);
 
     printf("%s:: Init stream data\n", __func__ );
     for ( int i = 0; i < user_group.num_comms; ++i )
@@ -86,16 +115,13 @@ int main(int argc, char* argv[])
         CUDACHECK(cudaStreamCreate( &(user_group.streams[i]) ));
     }
 
-    for ( int i = 0; i < helper_group1.num_comms; ++i )
+    for ( int group_i = 0; group_i < blinkplusHelperGroupsContainer.size(); ++group_i )
     {
-        CUDACHECK(cudaSetDevice( helper_group1.devs[ i ] ));
-        CUDACHECK(cudaStreamCreate( &(helper_group1.streams[i]) ));
-    }
-
-    for ( int i = 0; i < helper_group2.num_comms; ++i )
-    {
-        CUDACHECK(cudaSetDevice( helper_group2.devs[ i ] ));
-        CUDACHECK(cudaStreamCreate( &(helper_group2.streams[i]) ));
+        for ( int i = 0; i < blinkplusHelperGroupsContainer.at( group_i ).num_comms; ++i )
+        {
+            CUDACHECK(cudaSetDevice( blinkplusHelperGroupsContainer.at( group_i ).devs[ i ] ));
+            CUDACHECK(cudaStreamCreate( &(blinkplusHelperGroupsContainer.at( group_i ).streams[i]) ));
+        }
     }
 
     printf("=========%s:: Initial data of size %d MB=========\n", __func__, int(atoi(argv[5]) * sizeof(uint8_t)));
@@ -117,32 +143,31 @@ int main(int argc, char* argv[])
       CUDACHECK(cudaMemset( user_group.recvbuff[ comm_i ], 0, chunk_data_size * sizeof(uint8_t)));    
     }
 
-    for ( int comm_i = 0; comm_i < helper_group1.num_comms; ++comm_i )
-    {
-      CUDACHECK(cudaSetDevice( helper_group1.devs[ comm_i ] ));
-      CUDACHECK(cudaMalloc( (helper_group1.sendbuff.data() + comm_i), chunk_data_size * sizeof(uint8_t) ));
-      CUDACHECK(cudaMalloc( (helper_group1.recvbuff.data() + comm_i), chunk_data_size * sizeof(uint8_t)));
-      CUDACHECK(cudaMemcpy( helper_group1.sendbuff[ comm_i ], h_sendbuff.data(), chunk_data_size * sizeof(uint8_t), cudaMemcpyHostToDevice ));
-      CUDACHECK(cudaMemset( helper_group1.recvbuff[ comm_i ], 0, chunk_data_size * sizeof(uint8_t)));    
-    }
+    // Allocate buffer for user group
+    
 
-    for ( int comm_i = 0; comm_i < helper_group2.num_comms; ++comm_i )
+    for ( int group_i = 0; group_i < blinkplusHelperGroupsContainer.size(); ++group_i )
     {
-      CUDACHECK(cudaSetDevice( helper_group2.devs[ comm_i ] ));
-      CUDACHECK(cudaMalloc( (helper_group2.sendbuff.data() + comm_i), chunk_data_size * sizeof(uint8_t) ));
-      CUDACHECK(cudaMalloc( (helper_group2.recvbuff.data() + comm_i), chunk_data_size * sizeof(uint8_t)));
-      CUDACHECK(cudaMemcpy( helper_group2.sendbuff[ comm_i ], h_sendbuff.data(), chunk_data_size * sizeof(uint8_t), cudaMemcpyHostToDevice ));
-      CUDACHECK(cudaMemset( helper_group2.recvbuff[ comm_i ], 0, chunk_data_size * sizeof(uint8_t)));    
+        for ( int comm_i = 0; comm_i < blinkplusHelperGroupsContainer.at( group_i ).num_comms; ++comm_i )
+        {
+        CUDACHECK(cudaSetDevice( blinkplusHelperGroupsContainer.at( group_i ).devs[ comm_i ] ));
+        CUDACHECK(cudaMalloc( (blinkplusHelperGroupsContainer.at( group_i ).sendbuff.data() + comm_i), chunk_data_size * sizeof(uint8_t) ));
+        CUDACHECK(cudaMalloc( (blinkplusHelperGroupsContainer.at( group_i ).recvbuff.data() + comm_i), chunk_data_size * sizeof(uint8_t)));
+        CUDACHECK(cudaMemcpy( blinkplusHelperGroupsContainer.at( group_i ).sendbuff[ comm_i ], h_sendbuff.data(), chunk_data_size * sizeof(uint8_t), cudaMemcpyHostToDevice ));
+        CUDACHECK(cudaMemset( blinkplusHelperGroupsContainer.at( group_i ).recvbuff[ comm_i ], 0, chunk_data_size * sizeof(uint8_t)));    
+        }        
     }
 
     setenv( "NCCL_GRAPH_FILE", std::getenv("BLINKPLUS_GRAPH_FILE_CHAIN_01") , 1 );
     NCCLCHECK(ncclCommInitAll( user_group.comms.data(), user_group.num_comms, user_group.devs.data() ));
 
-    setenv( "NCCL_GRAPH_FILE", std::getenv("BLINKPLUS_GRAPH_FILE_CHAIN_021") , 1 );
-    NCCLCHECK(ncclCommInitAll( helper_group1.comms.data(), helper_group1.num_comms, helper_group1.devs.data() ));
-
-    setenv( "NCCL_GRAPH_FILE", std::getenv("BLINKPLUS_GRAPH_FILE_CHAIN_031") , 1 );
-    NCCLCHECK(ncclCommInitAll( helper_group2.comms.data(), helper_group2.num_comms, helper_group2.devs.data() ));
+    for ( int group_i = 0; group_i < blinkplusHelperGroupsContainer.size(); ++group_i )
+    {
+        setenv( "NCCL_GRAPH_FILE", blinkplusHelperGroupsContainer.at( group_i ).graph_filepath.c_str() , 1 );
+        NCCLCHECK(ncclCommInitAll( blinkplusHelperGroupsContainer.at( group_i ).comms.data(), \
+                                   blinkplusHelperGroupsContainer.at( group_i ).num_comms, \
+                                   blinkplusHelperGroupsContainer.at( group_i ).devs.data() ));
+    }
 
     printf("=====Start WarmUp Iters: %d =====\n", num_warmup);
     for (int iter = 0; iter < num_warmup; iter++) 
@@ -158,27 +183,19 @@ int main(int argc, char* argv[])
       }
       NCCLCHECK(ncclGroupEnd());
 
-      NCCLCHECK(ncclGroupStart());
-      for ( int i = 0; i < helper_group1.num_comms; ++i ) 
+      for ( int group_i = 0; group_i < blinkplusHelperGroupsContainer.size(); ++group_i )
       {
-          NCCLCHECK(ncclBroadcast((const void*)helper_group1.sendbuff[ i ], \
-                                  (void*)helper_group1.recvbuff[ i ], \
-                                  chunk_data_size, ncclInt8, helper_group1.devs[ 0 ], \
-                                  helper_group1.comms[i], \
-                                  helper_group1.streams[i]));
+        NCCLCHECK(ncclGroupStart());
+        for ( int i = 0; i < blinkplusHelperGroupsContainer.at( group_i).num_comms; ++i ) 
+        {
+            NCCLCHECK(ncclBroadcast((const void*)blinkplusHelperGroupsContainer.at( group_i).sendbuff[ i ], \
+                                    (void*)blinkplusHelperGroupsContainer.at( group_i).recvbuff[ i ], \
+                                    chunk_data_size, ncclInt8, blinkplusHelperGroupsContainer.at( group_i).devs[ 0 ], \
+                                    blinkplusHelperGroupsContainer.at( group_i).comms[i], \
+                                    blinkplusHelperGroupsContainer.at( group_i).streams[i]));
+        }
+        NCCLCHECK(ncclGroupEnd());
       }
-      NCCLCHECK(ncclGroupEnd());
-
-      NCCLCHECK(ncclGroupStart());
-      for ( int i = 0; i < helper_group2.num_comms; ++i ) 
-      {
-          NCCLCHECK(ncclBroadcast((const void*)helper_group2.sendbuff[ i ], \
-                                  (void*)helper_group2.recvbuff[ i ], \
-                                  chunk_data_size, ncclInt8, helper_group2.devs[ 0 ], \
-                                  helper_group2.comms[i], \
-                                  helper_group2.streams[i]));
-      }
-      NCCLCHECK(ncclGroupEnd());
     }
 
     for ( int i = 0; i < user_group.num_comms; ++i ) 
@@ -187,16 +204,13 @@ int main(int argc, char* argv[])
       CUDACHECK(cudaStreamSynchronize( user_group.streams[i] ));
     }
 
-    for ( int i = 0; i < helper_group1.num_comms; ++i ) 
+    for ( int group_i = 0; group_i < blinkplusHelperGroupsContainer.size(); ++group_i )
     {
-      CUDACHECK(cudaSetDevice( helper_group1.devs[i] ));
-      CUDACHECK(cudaStreamSynchronize( helper_group1.streams[i] ));
-    }
-
-    for ( int i = 0; i < helper_group2.num_comms; ++i ) 
-    {
-      CUDACHECK(cudaSetDevice( helper_group2.devs[i] ));
-      CUDACHECK(cudaStreamSynchronize( helper_group2.streams[i] ));
+        for ( int i = 0; i < blinkplusHelperGroupsContainer.at( group_i ).num_comms; ++i ) 
+        {
+          CUDACHECK(cudaSetDevice( blinkplusHelperGroupsContainer.at( group_i ).devs[i] ));
+          CUDACHECK(cudaStreamSynchronize( blinkplusHelperGroupsContainer.at( group_i ).streams[i] ));
+        }    
     }
 
     printf("=====End WarmUp=====\n");
@@ -217,27 +231,19 @@ int main(int argc, char* argv[])
       }
       NCCLCHECK(ncclGroupEnd());
 
-      NCCLCHECK(ncclGroupStart());
-      for ( int i = 0; i < helper_group1.num_comms; ++i ) 
+      for ( int group_i = 0; group_i < blinkplusHelperGroupsContainer.size(); ++group_i )
       {
-          NCCLCHECK(ncclBroadcast((const void*)helper_group1.sendbuff[ i ], \
-                                  (void*)helper_group1.recvbuff[ i ], \
-                                  chunk_data_size, ncclInt8, helper_group1.devs[ 0 ], \
-                                  helper_group1.comms[i], \
-                                  helper_group1.streams[i]));
+        NCCLCHECK(ncclGroupStart());
+        for ( int i = 0; i < blinkplusHelperGroupsContainer.at( group_i).num_comms; ++i ) 
+        {
+            NCCLCHECK(ncclBroadcast((const void*)blinkplusHelperGroupsContainer.at( group_i).sendbuff[ i ], \
+                                    (void*)blinkplusHelperGroupsContainer.at( group_i).recvbuff[ i ], \
+                                    chunk_data_size, ncclInt8, blinkplusHelperGroupsContainer.at( group_i).devs[ 0 ], \
+                                    blinkplusHelperGroupsContainer.at( group_i).comms[i], \
+                                    blinkplusHelperGroupsContainer.at( group_i).streams[i]));
+        }
+        NCCLCHECK(ncclGroupEnd());
       }
-      NCCLCHECK(ncclGroupEnd());
-
-      NCCLCHECK(ncclGroupStart());
-      for ( int i = 0; i < helper_group2.num_comms; ++i ) 
-      {
-          NCCLCHECK(ncclBroadcast((const void*)helper_group2.sendbuff[ i ], \
-                                  (void*)helper_group2.recvbuff[ i ], \
-                                  chunk_data_size, ncclInt8, helper_group2.devs[ 0 ], \
-                                  helper_group2.comms[i], \
-                                  helper_group2.streams[i]));
-      }
-      NCCLCHECK(ncclGroupEnd());
     }
 
     for ( int i = 0; i < user_group.num_comms; ++i ) 
@@ -246,17 +252,7 @@ int main(int argc, char* argv[])
       CUDACHECK(cudaStreamSynchronize( user_group.streams[i] ));
     }
 
-    for ( int i = 0; i < helper_group1.num_comms; ++i ) 
-    {
-      CUDACHECK(cudaSetDevice( helper_group1.devs[i] ));
-      CUDACHECK(cudaStreamSynchronize( helper_group1.streams[i] ));
-    }
-
-    for ( int i = 0; i < helper_group2.num_comms; ++i ) 
-    {
-      CUDACHECK(cudaSetDevice( helper_group2.devs[i] ));
-      CUDACHECK(cudaStreamSynchronize( helper_group2.streams[i] ));
-    }
+    NCCLCHECK( blinkplusStreamSynchronize() );
 
     // End timing
     {
@@ -285,28 +281,19 @@ int main(int argc, char* argv[])
       }
     }
 
-    for ( int comm_i = 0; comm_i < helper_group1.num_comms; ++comm_i )
+    for ( int group_i = 0; group_i < blinkplusHelperGroupsContainer.size(); ++group_i )
     {
-      CUDACHECK( cudaMemcpy( h_recvbuff.data(), user_group.recvbuff[ comm_i ], chunk_data_size * sizeof( uint8_t ), cudaMemcpyDeviceToHost ));
-      for ( int i = 0; i < h_recvbuff.size(); ++i )
-      {
-        if ( h_recvbuff[i] != h_sendbuff[i] )
+        for ( int comm_i = 0; comm_i < blinkplusHelperGroupsContainer.at( group_i ).num_comms; ++comm_i )
         {
-          printf("%s:: Check recv on helper group comm %d failed, expected %d but have %d\n", __func__, comm_i, h_sendbuff[i], h_recvbuff[i] );
-        }
-      }
-    }
-
-    for ( int comm_i = 0; comm_i < helper_group2.num_comms; ++comm_i )
-    {
-      CUDACHECK( cudaMemcpy( h_recvbuff.data(), user_group.recvbuff[ comm_i ], chunk_data_size * sizeof( uint8_t ), cudaMemcpyDeviceToHost ));
-      for ( int i = 0; i < h_recvbuff.size(); ++i )
-      {
-        if ( h_recvbuff[i] != h_sendbuff[i] )
-        {
-          printf("%s:: Check recv on helper group comm %d failed, expected %d but have %d\n", __func__, comm_i, h_sendbuff[i], h_recvbuff[i] );
-        }
-      }
+            CUDACHECK( cudaMemcpy( h_recvbuff.data(), blinkplusHelperGroupsContainer.at( group_i ).recvbuff[ comm_i ], chunk_data_size * sizeof( uint8_t ), cudaMemcpyDeviceToHost ));
+            for ( int i = 0; i < h_recvbuff.size(); ++i )
+            {
+                if ( h_recvbuff[i] != h_sendbuff[i] )
+                {
+                printf("%s:: Check recv on helper group comm %d failed, expected %d but have %d\n", __func__, comm_i, h_sendbuff[i], h_recvbuff[i] );
+                }
+            }
+        }        
     }
 
     for ( int comm_i = 0; comm_i < user_group.num_comms; ++comm_i )
@@ -316,35 +303,22 @@ int main(int argc, char* argv[])
       CUDACHECK(cudaFree( user_group.recvbuff[ comm_i ] ));
     }
 
-    for ( int comm_i = 0; comm_i < helper_group1.num_comms; ++comm_i )
+    for ( int comm_i = 0; comm_i < user_group.num_comms; ++comm_i ) 
     {
-      CUDACHECK(cudaSetDevice( helper_group1.devs[ comm_i ] ));
-      CUDACHECK(cudaFree( helper_group1.sendbuff[ comm_i ] ));
-      CUDACHECK(cudaFree( helper_group1.recvbuff[ comm_i ] ));
+        NCCLCHECK( ncclCommDestroy( user_group.comms[ comm_i] ) );
     }
 
-    for ( int comm_i = 0; comm_i < helper_group2.num_comms; ++comm_i )
+    for ( int group_i = 0; group_i < blinkplusHelperGroupsContainer.size(); ++group_i )
     {
-      CUDACHECK(cudaSetDevice( helper_group2.devs[ comm_i ] ));
-      CUDACHECK(cudaFree( helper_group2.sendbuff[ comm_i ] ));
-      CUDACHECK(cudaFree( helper_group2.recvbuff[ comm_i ] ));
+        for ( int comm_i = 0; comm_i < blinkplusHelperGroupsContainer.at( group_i ).num_comms; ++comm_i )
+        {
+            CUDACHECK(cudaSetDevice( blinkplusHelperGroupsContainer.at( group_i ).devs[ comm_i ] ));
+            CUDACHECK(cudaFree( blinkplusHelperGroupsContainer.at( group_i ).sendbuff[ comm_i ] ));
+            CUDACHECK(cudaFree( blinkplusHelperGroupsContainer.at( group_i ).recvbuff[ comm_i ] ));
+            NCCLCHECK( ncclCommDestroy( blinkplusHelperGroupsContainer.at( group_i ).comms[ comm_i ] ) );
+        }
     }
 
-
-    for ( int i = 0; i < user_group.num_comms; ++i ) 
-    {
-        ncclCommDestroy( user_group.comms[i] );
-    }
-
-    for ( int i = 0; i < helper_group1.num_comms; ++i ) 
-    {
-        ncclCommDestroy( helper_group1.comms[i]);
-    }
-
-    for ( int i = 0; i < helper_group2.num_comms; ++i ) 
-    {
-        ncclCommDestroy( helper_group2.comms[i]);
-    }
 
     printf("%s:: Success \n", __func__);
     return 0;

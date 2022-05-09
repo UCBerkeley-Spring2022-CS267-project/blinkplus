@@ -8,33 +8,32 @@
 #include <stdexcept> // std::runtime_error
 #include "blinkplus.h"
 
-  #define CUDACHECK(cmd) do {                         \
-    cudaError_t e = cmd;                              \
-    if( e != cudaSuccess ) {                          \
-      printf("Failed: Cuda error %s:%d '%s'\n",       \
-          __FILE__,__LINE__,cudaGetErrorString(e));   \
-      exit(EXIT_FAILURE);                             \
-    }                                                 \
-  } while(0)
-  
-  
-  #define NCCLCHECK(cmd) do {                         \
-    ncclResult_t r = cmd;                             \
-    if (r!= ncclSuccess) {                            \
-      printf("Failed, NCCL error %s:%d '%s'\n",       \
-          __FILE__,__LINE__,ncclGetErrorString(r));   \
-      exit(EXIT_FAILURE);                             \
-    }                                                 \
-  } while(0)
+#define CUDACHECK(cmd) do {                         \
+  cudaError_t e = cmd;                              \
+  if( e != cudaSuccess ) {                          \
+    printf("Failed: Cuda error %s:%d '%s'\n",       \
+        __FILE__,__LINE__,cudaGetErrorString(e));   \
+    exit(EXIT_FAILURE);                             \
+  }                                                 \
+} while(0)
 
-  #define BLINKPLUS_BUFFER_SIZE_BYTES 100000000 // 1GB
+
+#define NCCLCHECK(cmd) do {                         \
+  ncclResult_t r = cmd;                             \
+  if (r!= ncclSuccess) {                            \
+    printf("Failed, NCCL error %s:%d '%s'\n",       \
+        __FILE__,__LINE__,ncclGetErrorString(r));   \
+    exit(EXIT_FAILURE);                             \
+  }                                                 \
+} while(0)
+
 
 struct blinkplusHelperGroup
 {
     std::vector<int> devs;
     std::vector<ncclComm_t> comms;
-    std::vector<int*> sendbuff;
-    std::vector<int*> recvbuff;
+    std::vector<void*> sendbuff;
+    std::vector<void*> recvbuff;
     std::vector<cudaStream_t> streams;
     std::string graph_filepath;
     int num_comms;
@@ -69,39 +68,67 @@ enum class blinkplusUserGroupType
 
 std::vector<blinkplusHelperGroup> blinkplusHelperGroupsContainer;
 blinkplusUserGroupType userGroupType;
+constexpr int BLINKPLUS_BUFFER_SIZE_BYTES = 1026*1024*1024;
+
+
+// std::map<blinkplusUserGroupType, std::vector<std::pair<std::string, std::vector<int>>>> configs
+// {
+//   { blinkplusUserGroupType::GROUP01, 
+//     std::vector<std::pair<std::string, std::vector<int>>>{
+//       std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_021", std::vector<int>{0,2,1} ),
+//       std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_031", std::vector<int>{0,3,1} ),
+//       std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_0321", std::vector<int>{0,3,2,1} ) 
+//     }},
+//   { blinkplusUserGroupType::GROUP12, 
+//     std::vector<std::pair<std::string, std::vector<int>>>{
+//       std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_102", std::vector<int>{1,0,2} ),
+//       std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_132", std::vector<int>{1,3,2} ) } },
+//   { blinkplusUserGroupType::GROUP03,
+//       std::vector<std::pair<std::string, std::vector<int>>>{
+//         std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_013", std::vector<int>{0,1,3} ),
+//         std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_023", std::vector<int>{0,2,3} ) } },
+//   { blinkplusUserGroupType::GROUP23,
+//     std::vector<std::pair<std::string, std::vector<int>>>{
+//       std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_203", std::vector<int>{2,0,3} ),
+//       std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_213", std::vector<int>{2,1,3} ),
+//       std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_2103", std::vector<int>{2,1,0,3} ) } },
+//   { blinkplusUserGroupType::GROUP02,
+//     std::vector<std::pair<std::string, std::vector<int>>>{
+//       std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_032", std::vector<int>{0,3,2} ),
+//       std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_012", std::vector<int>{0,1,2} ) } },
+//   { blinkplusUserGroupType::GROUP13,
+//     std::vector<std::pair<std::string, std::vector<int>>>{
+//       std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_103", std::vector<int>{1,0,3} ),
+//       std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_123", std::vector<int>{1,2,3} ) } },
+// };
 
 std::map<blinkplusUserGroupType, std::vector<std::pair<std::string, std::vector<int>>>> configs
 {
   { blinkplusUserGroupType::GROUP01, 
     std::vector<std::pair<std::string, std::vector<int>>>{
       std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_021", std::vector<int>{0,2,1} ),
-      std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_031", std::vector<int>{0,3,1} ),
-      std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_0321", std::vector<int>{0,3,2,1} ) } },
+      std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_031", std::vector<int>{0,3,1} ) }},
   { blinkplusUserGroupType::GROUP12, 
     std::vector<std::pair<std::string, std::vector<int>>>{
-      std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_102", std::vector<int>{1,0,2} ),
-      std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_132", std::vector<int>{1,3,2} ) } },
+      std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_102", std::vector<int>{1,0,2} ) } },
   { blinkplusUserGroupType::GROUP03,
       std::vector<std::pair<std::string, std::vector<int>>>{
-        std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_013", std::vector<int>{0,1,3} ),
-        std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_023", std::vector<int>{0,2,3} ) } },
+        std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_013", std::vector<int>{0,1,3} ) } },
   { blinkplusUserGroupType::GROUP23,
     std::vector<std::pair<std::string, std::vector<int>>>{
-      std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_203", std::vector<int>{2,0,3} ),
-      std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_213", std::vector<int>{2,1,3} ),
-      std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_2103", std::vector<int>{2,1,0,3} ) } },
+      std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_203", std::vector<int>{2,0,3} ) } },
   { blinkplusUserGroupType::GROUP02,
     std::vector<std::pair<std::string, std::vector<int>>>{
       std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_032", std::vector<int>{0,3,2} ),
-      std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_012", std::vector<int>{0,1,2} ) } },
+      std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_032", std::vector<int>{0,3,2} ) } },
   { blinkplusUserGroupType::GROUP13,
     std::vector<std::pair<std::string, std::vector<int>>>{
       std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_103", std::vector<int>{1,0,3} ),
       std::make_pair( "BLINKPLUS_GRAPH_FILE_CHAIN_123", std::vector<int>{1,2,3} ) } },
 };
 
-// NCCL_API(ncclResult_t, blinkplusGetHelperCnt, ncclComm_t* comms, int ndev, const int *devlist, int* helper_cnt );
-ncclResult_t blinkplusGetHelperCnt( ncclComm_t* comm, int ndev, const int *devlist, int* helper_cnt )
+
+ncclResult_t blinkplusGetHelperCnt( ncclComm_t* comm, int ndev, const int *devlist, std::vector<int>& data_partition )
 {
   if ( ndev != 2 )
   {
@@ -162,7 +189,14 @@ ncclResult_t blinkplusGetHelperCnt( ncclComm_t* comm, int ndev, const int *devli
     throw std::runtime_error("User GPU group currently not supported\n");
   }
 
-  *helper_cnt = configs.at( userGroupType ).size();
+  if ( configs.at( userGroupType ).size() == 1 )
+  {
+    data_partition = std::vector<int>{2, 1};
+  }
+  else
+  {
+    data_partition = std::vector<int>{1,1,1};
+  }
 
   return ncclSuccess;
 }

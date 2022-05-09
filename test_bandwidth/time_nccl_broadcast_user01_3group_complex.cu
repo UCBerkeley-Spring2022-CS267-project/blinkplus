@@ -26,9 +26,12 @@
 
 int main(int argc, char* argv[])
 {
+    printf("This file validate result that does not work\n");
+    exit(1);
+
     if ( argc != 6 )
     {
-        printf("Usage ./time_nccl_broadcast_user01_3group.out 0 1 NUM_WARMUP NUM_ITER TOTAL_DATA_SIZE\n");
+        printf("Usage ./time_nccl_broadcast_user01_3group_complex.out 0 1 NUM_WARMUP NUM_ITER TOTAL_DATA_SIZE\n");
         exit(1);
     }
 
@@ -93,8 +96,8 @@ int main(int argc, char* argv[])
     uint8_t** helper_group_2_sendbuff = (uint8_t**)malloc(helper_group_2_num_comm * sizeof(uint8_t*));
     uint8_t** helper_group_2_recvbuff = (uint8_t**)malloc(helper_group_2_num_comm * sizeof(uint8_t*));
 
-    std::vector<uint8_t> h_sendbuff( chunk_data_size );
-    for ( int i = 0; i < chunk_data_size; ++i )
+    std::vector<uint8_t> h_sendbuff( total_data_size );
+    for ( int i = 0; i < total_data_size; ++i )
     {
       h_sendbuff[ i ] = i;
     }
@@ -102,28 +105,28 @@ int main(int argc, char* argv[])
     for ( int comm_i = 0; comm_i < user_group_num_comm; ++comm_i )
     {
       CUDACHECK(cudaSetDevice( user_group_devs[ comm_i ] ));
-      CUDACHECK(cudaMalloc( (user_group_sendbuff + comm_i), chunk_data_size * sizeof(uint8_t) ));
-      CUDACHECK(cudaMalloc( (user_group_recvbuff + comm_i), chunk_data_size * sizeof(uint8_t)));
-      CUDACHECK(cudaMemcpy( user_group_sendbuff[ comm_i ], h_sendbuff.data(), chunk_data_size * sizeof(uint8_t), cudaMemcpyHostToDevice ));
-      CUDACHECK(cudaMemset( user_group_recvbuff[ comm_i ], 0, chunk_data_size * sizeof(uint8_t)));    
+      CUDACHECK(cudaMalloc( (user_group_sendbuff + comm_i), total_data_size * sizeof(uint8_t) ));
+      CUDACHECK(cudaMalloc( (user_group_recvbuff + comm_i), total_data_size * sizeof(uint8_t)));
+      CUDACHECK(cudaMemcpy( user_group_sendbuff[ comm_i ], h_sendbuff.data(), total_data_size * sizeof(uint8_t), cudaMemcpyHostToDevice ));
+      CUDACHECK(cudaMemset( user_group_recvbuff[ comm_i ], 0, total_data_size * sizeof(uint8_t)));    
     }
 
     for ( int comm_i = 0; comm_i < helper_group_1_num_comm; ++comm_i )
     {
-      CUDACHECK(cudaSetDevice( helper_group_1_devs[ comm_i ] ));
-      CUDACHECK(cudaMalloc( (helper_group_1_sendbuff + comm_i), chunk_data_size * sizeof(uint8_t) ));
-      CUDACHECK(cudaMalloc( (helper_group_1_recvbuff + comm_i), chunk_data_size * sizeof(uint8_t)));
-      CUDACHECK(cudaMemcpy( helper_group_1_sendbuff[ comm_i ], h_sendbuff.data(), chunk_data_size * sizeof(uint8_t), cudaMemcpyHostToDevice ));
-      CUDACHECK(cudaMemset( helper_group_1_recvbuff[ comm_i ], 0, chunk_data_size * sizeof(uint8_t)));    
+        CUDACHECK(cudaSetDevice( helper_group_1_devs[ comm_i ] ));
+        CUDACHECK(cudaMalloc( (helper_group_1_sendbuff + comm_i), chunk_data_size * sizeof(uint8_t) ));
+        CUDACHECK(cudaMalloc( (helper_group_1_recvbuff + comm_i), chunk_data_size * sizeof(uint8_t)));
+        CUDACHECK(cudaMemcpy( helper_group_1_sendbuff[ comm_i ], h_sendbuff.data(), chunk_data_size * sizeof(uint8_t), cudaMemcpyHostToDevice ));
+        CUDACHECK(cudaMemset( helper_group_1_recvbuff[ comm_i ], 0, chunk_data_size * sizeof(uint8_t)));
     }
 
     for ( int comm_i = 0; comm_i < helper_group_2_num_comm; ++comm_i )
     {
-      CUDACHECK(cudaSetDevice( helper_group_2_devs[ comm_i ] ));
-      CUDACHECK(cudaMalloc( (helper_group_2_sendbuff + comm_i), chunk_data_size * sizeof(uint8_t) ));
-      CUDACHECK(cudaMalloc( (helper_group_2_recvbuff + comm_i), chunk_data_size * sizeof(uint8_t)));
-      CUDACHECK(cudaMemcpy( helper_group_2_sendbuff[ comm_i ], h_sendbuff.data(), chunk_data_size * sizeof(uint8_t), cudaMemcpyHostToDevice ));
-      CUDACHECK(cudaMemset( helper_group_2_recvbuff[ comm_i ], 0, chunk_data_size * sizeof(uint8_t)));
+        CUDACHECK(cudaSetDevice( helper_group_2_devs[ comm_i ] ));
+        CUDACHECK(cudaMalloc( (helper_group_2_sendbuff + comm_i), chunk_data_size * sizeof(uint8_t) ));
+        CUDACHECK(cudaMalloc( (helper_group_2_recvbuff + comm_i), chunk_data_size * sizeof(uint8_t)));
+        CUDACHECK(cudaMemcpy( helper_group_2_sendbuff[ comm_i ], h_sendbuff.data(), chunk_data_size * sizeof(uint8_t), cudaMemcpyHostToDevice ));
+        CUDACHECK(cudaMemset( helper_group_2_recvbuff[ comm_i ], 0, chunk_data_size * sizeof(uint8_t)));
     }
 
     setenv( "NCCL_GRAPH_FILE", std::getenv("BLINKPLUS_GRAPH_FILE_CHAIN_01") , 1 );
@@ -139,6 +142,8 @@ int main(int argc, char* argv[])
     for (int iter = 0; iter < num_warmup; iter++) 
     {
       NCCLCHECK(ncclGroupStart());
+
+      NCCLCHECK(ncclGroupStart());
       for ( int i = 0; i < user_group_num_comm; ++i ) 
       {
           NCCLCHECK(ncclBroadcast((const void*)user_group_sendbuff[ i ], \
@@ -152,23 +157,63 @@ int main(int argc, char* argv[])
       NCCLCHECK(ncclGroupStart());
       for ( int i = 0; i < helper_group_1_num_comm; ++i ) 
       {
-          NCCLCHECK(ncclBroadcast((const void*)helper_group_1_sendbuff[ i ], \
-                                  (void*)helper_group_1_recvbuff[ i ], \
-                                  chunk_data_size, ncclInt8, helper_group_1_devs[ 0 ], \
-                                  helper_group_1_comms[i], \
-                                  helper_group_1_streams[i]));
+          if ( helper_group_1_devs[ i ] == 0  )
+          {
+            NCCLCHECK(ncclBroadcast((const void*)(user_group_sendbuff[ 0 ] + chunk_data_size * sizeof(uint8_t)), \
+                                    (void*)(user_group_recvbuff[ 0 ] + chunk_data_size * sizeof(uint8_t)), \
+                                    chunk_data_size, ncclInt8, helper_group_1_devs[ 0 ], \
+                                    helper_group_1_comms[i], \
+                                    helper_group_1_streams[i]));
+          }
+          else if ( helper_group_1_devs[ i ] == 1 )
+          {
+            NCCLCHECK(ncclBroadcast((const void*)(user_group_sendbuff[ 1 ] + chunk_data_size * sizeof(uint8_t)), \
+                                    (void*)(user_group_recvbuff[ 1 ] + chunk_data_size * sizeof(uint8_t)), \
+                                    chunk_data_size, ncclInt8, helper_group_1_devs[ 0 ], \
+                                    helper_group_1_comms[i], \
+                                    helper_group_1_streams[i]));
+          }
+          else
+          {
+            NCCLCHECK(ncclBroadcast((const void*)helper_group_1_sendbuff[ i ], \
+                                    (void*)helper_group_1_recvbuff[ i ], \
+                                    chunk_data_size, ncclInt8, helper_group_1_devs[ 0 ], \
+                                    helper_group_1_comms[i], \
+                                    helper_group_1_streams[i]));              
+          }
       }
       NCCLCHECK(ncclGroupEnd());
 
       NCCLCHECK(ncclGroupStart());
       for ( int i = 0; i < helper_group_2_num_comm; ++i ) 
       {
+        if ( helper_group_1_devs[ i ] == 0  )
+        {
+          NCCLCHECK(ncclBroadcast((const void*)(user_group_sendbuff[ 0 ] + chunk_data_size * sizeof(uint8_t)), \
+                                  (void*)(user_group_recvbuff[ 0 ] + chunk_data_size * sizeof(uint8_t)), \
+                                  chunk_data_size, ncclInt8, helper_group_1_devs[ 0 ], \
+                                  helper_group_1_comms[i], \
+                                  helper_group_1_streams[i]));
+        }
+        else if ( helper_group_1_devs[ i ] == 1 )
+        {
+          NCCLCHECK(ncclBroadcast((const void*)(user_group_sendbuff[ 1 ] + chunk_data_size * sizeof(uint8_t)), \
+                                  (void*)(user_group_recvbuff[ 1 ] + chunk_data_size * sizeof(uint8_t)), \
+                                  chunk_data_size, ncclInt8, helper_group_1_devs[ 0 ], \
+                                  helper_group_1_comms[i], \
+                                  helper_group_1_streams[i]));
+        }
+        else
+        {
           NCCLCHECK(ncclBroadcast((const void*)helper_group_2_sendbuff[ i ], \
                                   (void*)helper_group_2_recvbuff[ i ], \
-                                  chunk_data_size, ncclInt8, helper_group_2_devs[ 0 ], \
-                                  helper_group_2_comms[i], \
-                                  helper_group_2_streams[i]));
+                                  chunk_data_size, ncclInt8, helper_group_1_devs[ 0 ], \
+                                  helper_group_1_comms[i], \
+                                  helper_group_1_streams[i]));              
+        }
       }
+      NCCLCHECK(ncclGroupEnd());
+
       NCCLCHECK(ncclGroupEnd());
     }
 
@@ -201,7 +246,7 @@ int main(int argc, char* argv[])
         NCCLCHECK(ncclGroupStart());
 
         NCCLCHECK(ncclGroupStart());
-        for ( int i = 0; i < user_group_num_comm; ++i )
+        for ( int i = 0; i < user_group_num_comm; ++i ) 
         {
             NCCLCHECK(ncclBroadcast((const void*)user_group_sendbuff[ i ], \
                                     (void*)user_group_recvbuff[ i ], \
@@ -210,26 +255,64 @@ int main(int argc, char* argv[])
                                     user_group_streams[i]));
         }
         NCCLCHECK(ncclGroupEnd());
-
+  
         NCCLCHECK(ncclGroupStart());
-        for ( int i = 0; i < helper_group_1_num_comm; ++i )
+        for ( int i = 0; i < helper_group_1_num_comm; ++i ) 
         {
-            NCCLCHECK(ncclBroadcast((const void*)helper_group_1_sendbuff[ i ], \
-                                    (void*)helper_group_1_recvbuff[ i ], \
-                                    chunk_data_size, ncclInt8, helper_group_1_devs[ 0 ], \
-                                    helper_group_1_comms[i], \
-                                    helper_group_1_streams[i]));
+            if ( helper_group_1_devs[ i ] == 0  )
+            {
+              NCCLCHECK(ncclBroadcast((const void*)(user_group_sendbuff[ 0 ] + chunk_data_size * sizeof(uint8_t)), \
+                                      (void*)(user_group_recvbuff[ 0 ] + chunk_data_size * sizeof(uint8_t)), \
+                                      chunk_data_size, ncclInt8, helper_group_1_devs[ 0 ], \
+                                      helper_group_1_comms[i], \
+                                      helper_group_1_streams[i]));
+            }
+            else if ( helper_group_1_devs[ i ] == 1 )
+            {
+              NCCLCHECK(ncclBroadcast((const void*)(user_group_sendbuff[ 1 ] + chunk_data_size * sizeof(uint8_t)), \
+                                      (void*)(user_group_recvbuff[ 1 ] + chunk_data_size * sizeof(uint8_t)), \
+                                      chunk_data_size, ncclInt8, helper_group_1_devs[ 0 ], \
+                                      helper_group_1_comms[i], \
+                                      helper_group_1_streams[i]));
+            }
+            else
+            {
+              NCCLCHECK(ncclBroadcast((const void*)helper_group_1_sendbuff[ i ], \
+                                      (void*)helper_group_1_recvbuff[ i ], \
+                                      chunk_data_size, ncclInt8, helper_group_1_devs[ 0 ], \
+                                      helper_group_1_comms[i], \
+                                      helper_group_1_streams[i]));              
+            }
         }
         NCCLCHECK(ncclGroupEnd());
   
         NCCLCHECK(ncclGroupStart());
         for ( int i = 0; i < helper_group_2_num_comm; ++i ) 
         {
+          if ( helper_group_1_devs[ i ] == 0  )
+          {
+            NCCLCHECK(ncclBroadcast((const void*)(user_group_sendbuff[ 0 ] + chunk_data_size * sizeof(uint8_t)), \
+                                    (void*)(user_group_recvbuff[ 0 ] + chunk_data_size * sizeof(uint8_t)), \
+                                    chunk_data_size, ncclInt8, helper_group_1_devs[ 0 ], \
+                                    helper_group_1_comms[i], \
+                                    helper_group_1_streams[i]));
+          }
+          else if ( helper_group_1_devs[ i ] == 1 )
+          {
+            NCCLCHECK(ncclBroadcast((const void*)(user_group_sendbuff[ 1 ] + chunk_data_size * sizeof(uint8_t)), \
+                                    (void*)(user_group_recvbuff[ 1 ] + chunk_data_size * sizeof(uint8_t)), \
+                                    chunk_data_size, ncclInt8, helper_group_1_devs[ 0 ], \
+                                    helper_group_1_comms[i], \
+                                    helper_group_1_streams[i]));
+          }
+          else
+          {
             NCCLCHECK(ncclBroadcast((const void*)helper_group_2_sendbuff[ i ], \
                                     (void*)helper_group_2_recvbuff[ i ], \
-                                    chunk_data_size, ncclInt8, helper_group_2_devs[ 0 ], \
-                                    helper_group_2_comms[i], \
-                                    helper_group_2_streams[i]));
+                                    chunk_data_size, ncclInt8, helper_group_1_devs[ 0 ], \
+                                    helper_group_1_comms[i], \
+                                    helper_group_1_streams[i]));              
+          }
         }
         NCCLCHECK(ncclGroupEnd());
 
@@ -327,15 +410,21 @@ int main(int argc, char* argv[])
     for ( int comm_i = 0; comm_i < helper_group_1_num_comm; ++comm_i )
     {
       CUDACHECK(cudaSetDevice( helper_group_1_devs[ comm_i ] ));
-      CUDACHECK(cudaFree( helper_group_1_sendbuff[ comm_i ] ));
-      CUDACHECK(cudaFree( helper_group_1_recvbuff[ comm_i ] ));
+      if ( helper_group_1_devs[ comm_i ] != 0 && helper_group_1_devs[ comm_i ] != 1 )
+      {
+        CUDACHECK(cudaFree( helper_group_1_sendbuff[ comm_i ] ));
+        CUDACHECK(cudaFree( helper_group_1_recvbuff[ comm_i ] ));          
+      }
     }
 
     for ( int comm_i = 0; comm_i < helper_group_2_num_comm; ++comm_i )
     {
       CUDACHECK(cudaSetDevice( helper_group_2_devs[ comm_i ] ));
-      CUDACHECK(cudaFree( helper_group_2_sendbuff[ comm_i ] ));
-      CUDACHECK(cudaFree( helper_group_2_recvbuff[ comm_i ] ));
+      if ( helper_group_2_devs[ comm_i ] != 0 && helper_group_2_devs[ comm_i ] != 1 )
+      {
+        CUDACHECK(cudaFree( helper_group_2_sendbuff[ comm_i ] ));
+        CUDACHECK(cudaFree( helper_group_2_recvbuff[ comm_i ] ));
+      }
     }
 
     for ( int i = 0; i < user_group_num_comm; ++i ) 
