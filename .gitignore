@@ -11,3 +11,6 @@ examples/build/
 
 # profile
 *.nvvp
+
+# executable
+*.out

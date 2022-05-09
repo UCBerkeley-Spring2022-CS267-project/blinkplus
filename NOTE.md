@@ -8,6 +8,8 @@ salloc -N 1 -p GPU-shared --gres=gpu:4 -q interactive
 * request node como on rise
 ```shell
 srun --nodelist=zanino -t 60:00 --pty bash
+srun --nodelist=como -t 60:00 --pty bash
+
 ```
 
 * check nvlink connection
@@ -48,6 +50,7 @@ NCCL_GRAPH_DUMP_FILE=`pwd`/graph.xml
 ```shell
 # save profile result
 /usr/local/cuda-11.5/bin/nvprof -f -o output.nvvp ./blinkplus_examples/run_blinkplus
+
 
 # visual result
 /usr/local/cuda-11.5/bin/nvvp output.nvvp

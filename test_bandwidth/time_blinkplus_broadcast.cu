@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
 {
     if ( argc != 6 )
     {
-        printf("Usage ./run_blinkplus_broadcast GU1 GPU2 NUM_WARMUP NUM_ITER TOTAL_DATA_SIZE\n");
+        printf("Usage ./time_blinkplus_broadcast GU1 GPU2 NUM_WARMUP NUM_ITER TOTAL_DATA_SIZE\n");
         exit(1);
     }
 

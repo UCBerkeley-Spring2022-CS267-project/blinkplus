@@ -1,19 +1,19 @@
 <graphs version="1">
-  <graph id="0" pattern="4" crossnic="0" nchannels="1" speedintra="42" speedinter="42" typeintra="NVL" typeinter="PIX" samechannels="0">
+  <graph id="0" pattern="4" crossnic="0" nchannels="1" speedintra="22" speedinter="22" latencyinter="0" typeintra="NVL" typeinter="PIX" samechannels="0">
     <channel>
       <gpu dev="0"/>
       <gpu dev="3"/>
       <gpu dev="2"/>
     </channel>
   </graph>
-  <graph id="1" pattern="2" crossnic="0" nchannels="1" speedintra="42" speedinter="42" typeintra="NVL" typeinter="PIX" samechannels="0">
+  <graph id="1" pattern="1" crossnic="0" nchannels="1" speedintra="22" speedinter="22" latencyinter="0" typeintra="NVL" typeinter="PIX" samechannels="0">
     <channel>
       <gpu dev="0"/>
       <gpu dev="3"/>
       <gpu dev="2"/>
     </channel>
   </graph>
-  <graph id="2" pattern="3" crossnic="0" nchannels="1" speedintra="42" speedinter="42" typeintra="NVL" typeinter="PIX" samechannels="0">
+  <graph id="2" pattern="3" crossnic="0" nchannels="1" speedintra="22" speedinter="22" latencyinter="0" typeintra="NVL" typeinter="PIX" samechannels="0">
     <channel>
       <gpu dev="0"/>
       <gpu dev="3"/>

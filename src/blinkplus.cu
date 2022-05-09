@@ -46,7 +46,6 @@ struct blinkplusHelperGroup
             throw std::runtime_error("BLINKPLUS_GRAPH_FILE_CHAIN_XXX unset\n");
         }
         this->graph_filepath = std::getenv(graph_filepath_cstr);
-
         this->devs = devs;
         this->comms.resize( this->devs.size() );
         this->sendbuff.resize( this->devs.size() );

@@ -146,9 +146,6 @@ int main(int argc, char* argv[])
 
     for ( int group_i = 0; group_i < sendbuffs.size(); ++group_i )
     {
-      if ( group_i != 0 )
-        continue;
-
       for ( int comm_i = 0; comm_i < num_comm; ++comm_i )
       {
         // Copy memory to cpu

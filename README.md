@@ -30,10 +30,12 @@ The example is currently placed under `blinkplus_examples`
 * Export graph path
 
 ```shell
+export BLINKPLUS_GRAPH_FILE_CHAIN_01=`pwd`/graphs/user01/chain01.xml
 export BLINKPLUS_GRAPH_FILE_CHAIN_021=`pwd`/graphs/user01/chain021.xml
 export BLINKPLUS_GRAPH_FILE_CHAIN_031=`pwd`/graphs/user01/chain031.xml
 export BLINKPLUS_GRAPH_FILE_CHAIN_0321=`pwd`/graphs/user01/chain0321.xml
 
+export BLINKPLUS_GRAPH_FILE_CHAIN_12=`pwd`/graphs/user12/chain12.xml
 export BLINKPLUS_GRAPH_FILE_CHAIN_102=`pwd`/graphs/user12/chain102.xml
 export BLINKPLUS_GRAPH_FILE_CHAIN_132=`pwd`/graphs/user12/chain132.xml
 
