@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.0 )
 
 set(CMAKE_CUDA_ARCHITECTURES 72)
+set(CMAKE_BUILD_TYPE Release)
 
 # project name
 project( blinkplus LANGUAGES CXX CUDA )
@@ -61,10 +62,11 @@ target_compile_features( time_nccl_broadcast_3gpu.out PRIVATE cxx_std_11)
 target_link_libraries( time_nccl_broadcast_3gpu.out PRIVATE nccl )
 
 # NCCL Allreduce Bandwidth
-add_executable( time_nccl_allreduce.out test_bandwidth/time_nccl_allreduce.cu )
-target_compile_features( time_nccl_allreduce.out PRIVATE cxx_std_11)
-target_link_libraries( time_nccl_allreduce.out PRIVATE nccl )
+add_executable( time_nccl_allreduce_2gpu.out test_bandwidth/time_nccl_allreduce_2gpu.cu )
+target_compile_features( time_nccl_allreduce_2gpu.out PRIVATE cxx_std_11)
+target_link_libraries( time_nccl_allreduce_2gpu.out PRIVATE nccl )
 
+# Mock BLINK+ Bandwidth
 add_executable( time_nccl_broadcast_user01_2group.out test_bandwidth/time_nccl_broadcast_user01_2group.cu )
 target_compile_features( time_nccl_broadcast_user01_2group.out PRIVATE cxx_std_11)
 target_link_libraries( time_nccl_broadcast_user01_2group.out PRIVATE nccl )
@@ -72,6 +74,10 @@ target_link_libraries( time_nccl_broadcast_user01_2group.out PRIVATE nccl )
 add_executable( time_nccl_broadcast_user01_3group.out test_bandwidth/time_nccl_broadcast_user01_3group.cu )
 target_compile_features( time_nccl_broadcast_user01_3group.out PRIVATE cxx_std_11)
 target_link_libraries( time_nccl_broadcast_user01_3group.out PRIVATE nccl )
+
+add_executable( time_nccl_allreduce_user01_3group.out test_bandwidth/time_nccl_allreduce_user01_3group.cu )
+target_compile_features( time_nccl_allreduce_user01_3group.out PRIVATE cxx_std_11)
+target_link_libraries( time_nccl_allreduce_user01_3group.out PRIVATE nccl )
 
 add_executable( time_nccl_broadcast_user01_4group.out test_bandwidth/time_nccl_broadcast_user01_4group.cu )
 target_compile_features( time_nccl_broadcast_user01_4group.out PRIVATE cxx_std_11)
@@ -93,6 +99,15 @@ add_executable( time_nccl_broadcast_user03_3group.out test_bandwidth/time_nccl_b
 target_compile_features( time_nccl_broadcast_user03_3group.out PRIVATE cxx_std_11)
 target_link_libraries( time_nccl_broadcast_user03_3group.out PRIVATE nccl )
 
+add_executable( time_nccl_allreduce_user03_3group.out test_bandwidth/time_nccl_allreduce_user03_3group.cu )
+target_compile_features( time_nccl_allreduce_user03_3group.out PRIVATE cxx_std_11)
+target_link_libraries( time_nccl_allreduce_user03_3group.out PRIVATE nccl )
+
 add_executable( time_nccl_broadcast_user03_4group.out test_bandwidth/time_nccl_broadcast_user03_4group.cu )
 target_compile_features( time_nccl_broadcast_user03_4group.out PRIVATE cxx_std_11)
 target_link_libraries( time_nccl_broadcast_user03_4group.out PRIVATE nccl )
+
+# BLINK+ Bandwidth
+add_executable( time_blinkplus_broadcast_user01_3group.out test_bandwidth/time_blinkplus_broadcast_user01_3group.cu src/blinkplus.cu )
+target_compile_features( time_blinkplus_broadcast_user01_3group.out PRIVATE cxx_std_11)
+target_link_libraries( time_blinkplus_broadcast_user01_3group.out PRIVATE nccl )
