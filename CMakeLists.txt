@@ -23,7 +23,7 @@ include_directories( ${NCCL_INCLUDE_DIRS} )
 include_directories( include )
 
 # exec
-# set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/blinkplus_examples )
+# ]set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/blinkplus_examples )
 
 # add_executable( run_blinkplus blinkplus_examples/run_blinkplus.cu src/blinkplus.cu )
 # add_executable( run_blinkplus_allreduce blinkplus_examples/run_blinkplus_allreduce.cu src/blinkplus.cu )
@@ -75,6 +75,10 @@ add_executable( time_nccl_broadcast_user01_3group.out test_bandwidth/time_nccl_b
 target_compile_features( time_nccl_broadcast_user01_3group.out PRIVATE cxx_std_11)
 target_link_libraries( time_nccl_broadcast_user01_3group.out PRIVATE nccl )
 
+add_executable( time_nccl_broadcast_user01_3group_complex.out test_bandwidth/time_nccl_broadcast_user01_3group_complex.cu )
+target_compile_features( time_nccl_broadcast_user01_3group_complex.out PRIVATE cxx_std_11)
+target_link_libraries( time_nccl_broadcast_user01_3group_complex.out PRIVATE nccl )
+
 add_executable( time_nccl_allreduce_user01_3group.out test_bandwidth/time_nccl_allreduce_user01_3group.cu )
 target_compile_features( time_nccl_allreduce_user01_3group.out PRIVATE cxx_std_11)
 target_link_libraries( time_nccl_allreduce_user01_3group.out PRIVATE nccl )
@@ -108,6 +112,10 @@ target_compile_features( time_nccl_broadcast_user03_4group.out PRIVATE cxx_std_1
 target_link_libraries( time_nccl_broadcast_user03_4group.out PRIVATE nccl )
 
 # BLINK+ Bandwidth
-add_executable( time_blinkplus_broadcast_user01_3group.out test_bandwidth/time_blinkplus_broadcast_user01_3group.cu src/blinkplus.cu )
-target_compile_features( time_blinkplus_broadcast_user01_3group.out PRIVATE cxx_std_11)
-target_link_libraries( time_blinkplus_broadcast_user01_3group.out PRIVATE nccl )
+add_executable( time_blinkplus_broadcast.out test_bandwidth/time_blinkplus_broadcast.cu src/blinkplus.cu )
+target_compile_features( time_blinkplus_broadcast.out PRIVATE cxx_std_11)
+target_link_libraries( time_blinkplus_broadcast.out PRIVATE nccl )
+
+add_executable( time_blinkplus_allreduce.out test_bandwidth/time_blinkplus_allreduce.cu src/blinkplus.cu )
+target_compile_features( time_blinkplus_allreduce.out PRIVATE cxx_std_11)
+target_link_libraries( time_blinkplus_allreduce.out PRIVATE nccl )
