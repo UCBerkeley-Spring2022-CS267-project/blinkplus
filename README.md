@@ -1,12 +1,20 @@
 # BLINK+
 
+## File structure overview
+```shell
+src/            # Blink+ implementation
+include/        # Blnk+ header file
+test_bandwidth/ # Bandwidth benchmark test, include bandwidth test for nccl and bandwidth test for Blink+
+visualization/  # Visualize experiment result
+graphs/         # .xml files that Blink+ use
+```
 
 
 ## Install
 
 * Build nccl package v2.7.8
 
-We have prepared a NCCL package v2.7.8 with some bug fix [link](https://github.com/UCBerkeley-Spring2022-CS267-project/blinkplus-nccl-base)
+Blink+ relies on NCCL v2.7.8. We have prepared a NCCL package v2.7.8 with some bug fix [link](https://github.com/UCBerkeley-Spring2022-CS267-project/blinkplus-nccl-base)
 
 ```shell
 git clone https://github.com/UCBerkeley-Spring2022-CS267-project/blinkplus-nccl-base.git
@@ -15,7 +23,7 @@ cd blinkplus-nccl-base
 
 and then follow the INSTALL.md file here [link](https://github.com/UCBerkeley-Spring2022-CS267-project/blinkplus-nccl-base/blob/blinkplus_base_v2.7.8/INSTALL.md) to install NCCL
 
-* Build blink+ example
+* Build blink+ library and benchmark
 ```shell
 mkdir build
 cd build
@@ -23,8 +31,6 @@ cmake .. -DCMAKE_CUDA_COMPILER=/usr/local/cuda-11.5/bin/nvcc -DCMAKE_BUILD_TYPE=
 make -j 10
 sudo make install
 ```
-
-The example is currently placed under `blinkplus_examples`
 
 
 * Export graph path
@@ -69,3 +75,12 @@ Run the notebook
 ```shell
 visualization/test_bandwidth.ipynb
 ```
+
+
+## Acknowlege
+
+This project is part of the final project for Xiao Song, Yefan Zhou, and Yibai Meng's Spring 2022 [CS267](https://sites.google.com/lbl.gov/cs267-spr2022) course at UC Berkeley. 
+
+Thanks for the help from our GSI [Guanhua Wang](https://people.eecs.berkeley.edu/~guanhua/)'s project idea and help. 
+
+Thanks for the help from NCCL's author [Sylvain Jeaugey](https://github.com/sjeaugey) on his help on answering our github issue questions. 

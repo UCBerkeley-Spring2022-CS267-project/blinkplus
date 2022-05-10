@@ -14,8 +14,7 @@
 # install NCCL in the same location as the CUDA toolkit.
 # See https://github.com/caffe2/caffe2/issues/1601
 
-#set(NCCL_ROOT_DIR $ENV{NCCL_ROOT_DIR} CACHE PATH "Folder contains NVIDIA NCCL")
-set(NCCL_ROOT_DIR /home/eecs/mengyibai/xiaosx/blinkplus-nccl-base/build )
+set(NCCL_ROOT_DIR $ENV{NCCL_ROOT_DIR} CACHE PATH "Folder contains NVIDIA NCCL")
 
 find_path(NCCL_INCLUDE_DIR
   NAMES nccl.h

@@ -22,32 +22,10 @@ endif()
 include_directories( ${NCCL_INCLUDE_DIRS} )
 include_directories( include )
 
-# exec
-# ]set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/blinkplus_examples )
-
-# add_executable( run_blinkplus blinkplus_examples/run_blinkplus.cu src/blinkplus.cu )
-# add_executable( run_blinkplus_allreduce blinkplus_examples/run_blinkplus_allreduce.cu src/blinkplus.cu )
-# add_executable( time_nccl_broadcast_12 blinkplus_examples/time_nccl_broadcast_12.cu src/blinkplus.cu )
-# add_executable( run_nccl blinkplus_examples/run_nccl.cu src/blinkplus.cu )
-# add_executable( run_nccl_allreduce blinkplus_examples/run_nccl_allreduce.cu src/blinkplus.cu)
-#add_executable( time_nccl_broadcast blinkplus_examples/time_nccl_broadcast.cu src/blinkplus.cu )
-
-# I'm using C++11 in the test
-# target_compile_features( run_blinkplus PRIVATE cxx_std_11)
-# target_compile_features( time_nccl_broadcast_12 PRIVATE cxx_std_11)
-# target_compile_features( run_blinkplus_allreduce PRIVATE cxx_std_11)
-# target_compile_features( run_nccl PRIVATE cxx_std_11)
-# target_compile_features( run_nccl_allreduce PRIVATE cxx_std_11)
-#target_compile_features( time_nccl_broadcast PRIVATE cxx_std_11)
-
-# link nccl
-# target_link_libraries( run_blinkplus PRIVATE nccl )
-# target_link_libraries( run_blinkplus_allreduce PRIVATE nccl)
-# target_link_libraries( time_nccl_broadcast_12 PRIVATE nccl)
-# target_link_libraries( run_nccl PRIVATE nccl )
-# target_link_libraries( run_nccl_allreduce PRIVATE nccl )
-#target_link_libraries( time_nccl_broadcast PRIVATE nccl )
-
+# Build library
+add_library(${PROJECT_NAME} STATIC src/blinkplus.cu )
+target_link_libraries(${PROJECT_NAME} PRIVATE ${nccl} )
+target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_11 )
 
 # Test bandwidth
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/test_bandwidth )
@@ -112,10 +90,10 @@ target_compile_features( time_nccl_broadcast_user03_4group.out PRIVATE cxx_std_1
 target_link_libraries( time_nccl_broadcast_user03_4group.out PRIVATE nccl )
 
 # BLINK+ Bandwidth
-add_executable( time_blinkplus_broadcast.out test_bandwidth/time_blinkplus_broadcast.cu src/blinkplus.cu )
+add_executable( time_blinkplus_broadcast.out test_bandwidth/time_blinkplus_broadcast.cu )
 target_compile_features( time_blinkplus_broadcast.out PRIVATE cxx_std_11)
-target_link_libraries( time_blinkplus_broadcast.out PRIVATE nccl )
+target_link_libraries( time_blinkplus_broadcast.out PRIVATE ${PROJECT_NAME} nccl )
 
-add_executable( time_blinkplus_allreduce.out test_bandwidth/time_blinkplus_allreduce.cu src/blinkplus.cu )
+add_executable( time_blinkplus_allreduce.out test_bandwidth/time_blinkplus_allreduce.cu )
 target_compile_features( time_blinkplus_allreduce.out PRIVATE cxx_std_11)
-target_link_libraries( time_blinkplus_allreduce.out PRIVATE nccl )
+target_link_libraries( time_blinkplus_allreduce.out PRIVATE ${PROJECT_NAME} nccl )
