@@ -1,5 +1,11 @@
 # BLINK+
 
+## Link to final report
+> Including test settings, bandwidth result, etc
+
+[link to gdrive](https://drive.google.com/file/d/1beK4ZheRnRLD1RnavPb68ObhMmx7KY5j/view?usp=sharing)
+
+
 ## File structure overview
 ```shell
 src/            # Blink+ implementation
